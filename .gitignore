@@ -1,0 +1,37 @@
+# OMC / tooling state
+.omc
+.claude
+
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+release
+out
+
+# Electron build artifacts
+*.dmg
+*.exe
+*.deb
+*.AppImage
+*.snap
+*.pkg
+*.blockmap
+
+# Vite cache
+.vite
+.cache
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.log
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Env
+.env
+.env.local
+.env.*.local
