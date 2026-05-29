@@ -231,7 +231,25 @@ function MainApp() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'dark');
+    // Electron preload exposes platform + titleBarMode. CSS uses the
+    // data-titlebar attribute to reserve 40px at the top of the app when we're
+    // drawing our own title bar (macOS hiddenInset mode).
+    const info = typeof window !== 'undefined' ? window.verifai : null;
+    if (info?.platform) document.documentElement.setAttribute('data-platform', info.platform);
+    if (info?.titleBarMode) document.documentElement.setAttribute('data-titlebar', info.titleBarMode);
   }, []);
+
+  // Demo: auto-start the tour on launch. Delay lets the Marginalia subtree
+  // mount so the [data-ftux-target] anchors exist for scrollIntoView.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const target = document.querySelector('[data-ftux-target="verdict"]');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setFtuxStep(1);
+    }, 250);
+    return () => clearTimeout(t);
+  }, []);
+
 
   const toggleExclude = (id) => setExcluded((e) => ({ ...e, [id]: !e[id] }));
 

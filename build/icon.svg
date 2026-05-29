@@ -1,0 +1,23 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a1a2e"/>
+      <stop offset="0.55" stop-color="#14142a"/>
+      <stop offset="1" stop-color="#0b0b12"/>
+    </linearGradient>
+    <radialGradient id="wash" cx="0.5" cy="0.35" r="0.8">
+      <stop offset="0" stop-color="#2e3352" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#2e3352" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="224" ry="224" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="224" ry="224" fill="url(#wash)"/>
+
+  <path d="M 224 92 L 800 92" stroke="rgba(255,255,255,0.06)" stroke-width="1" fill="none"/>
+
+  <path d="M547.340 745.940L491.100 745.940L328.460 292.980Q323.140 277.780 314.400 269.040Q305.660 260.300 290.460 255.740L290.460 255.740L272.220 249.660L272.220 242.060L491.100 242.060L491.100 249.660L467.540 256.500Q450.060 261.060 448.160 272.460Q446.260 283.860 451.580 300.580L451.580 300.580L564.060 634.220L677.300 299.820Q683.380 282.340 683 270.940Q682.620 259.540 665.140 254.980L665.140 254.980L645.380 249.660L645.380 242.060L751.780 242.060L751.780 249.660L731.260 255.740Q716.820 259.540 710.740 269.040Q704.660 278.540 699.340 293.740L699.340 293.740L547.340 745.940Z" fill="#f2f2f5"/>
+
+  <rect x="0.5" y="0.5" width="1023" height="1023" rx="223.5" ry="223.5"
+        fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+</svg>

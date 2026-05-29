@@ -13,6 +13,7 @@
   overflow: hidden;
 }
 
+
 .app-body {
   flex: 1;
   min-height: 0;
@@ -49,6 +50,7 @@
   padding: 0;
   justify-content: center;
 }
+
 .history-brand {
   font-size: var(--fs-xl);
   color: var(--ink-1);
