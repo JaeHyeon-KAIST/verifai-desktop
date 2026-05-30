@@ -40,17 +40,17 @@ This document is the **single source of truth**. Any new component or page must 
 ### 2.1 Font families
 
 ```css
---font-sans:  'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
---font-serif: 'DM Serif Display', Georgia, serif;
+--font-sans:  'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+--font-serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;  /* paper reader ONLY */
 --font-mono:  'Fira Code', 'SF Mono', ui-monospace, monospace;
 --font-ui:    'Inter', var(--font-sans);
 ```
 
-**When to use which:**
-- `--font-ui` (Inter) — default for all body text, labels, buttons.
-- `--font-serif` — page titles, section headers that carry editorial weight (chat head title, modal title, paper title).
-- `--font-mono` — numeric scores, DOIs, slider deltas, eyebrow data labels where tabular alignment matters.
-- `--font-sans` — fallback; rarely used directly.
+**When to use which** (grounded in W10 lecture: *Sans = screen/UI-oriented, Serif = reading-oriented; ≤ 3 typefaces; don't reuse a category*):
+- `--font-ui` (Inter) — **all app chrome**: body, titles, labels, buttons, nav, and the AI answer. Title hierarchy comes from **weight + size**, never a second family.
+- `--font-serif` (Georgia — system font, no download, robust offline) — **only** the source "paper" reader and verbatim quotations/excerpts (claim quote, paper excerpt, community comment). Signals "real document" + trust.
+- `--font-mono` (Fira Code) — numeric scores, DOIs, deltas, eyebrow data labels (tabular alignment only).
+- 3 families total, no category overlap. (`DM Sans` / `DM Serif Display` removed.)
 
 ### 2.2 Type scale (10 sizes)
 
@@ -59,7 +59,7 @@ This document is the **single source of truth**. Any new component or page must 
 | `--fs-eyebrow` | `0.6875rem` | 11 | UPPERCASE labels with letter-spacing (section eyebrows, stat labels) |
 | `--fs-xs` | `0.75rem` | 12 | Caption, meta text, timestamp, small hint |
 | `--fs-sm` | `0.8125rem` | 13 | Secondary body, chip text, tab count, reason pill |
-| `--fs-md` | `0.875rem` | 14 | **Body default**, list items, button text, input text |
+| `--fs-md` | `0.9375rem` | 15 | **Body default**, list items, button text, input text (bumped 14→15 for readability) |
 | `--fs-lg` | `1rem` | 16 | Emphasized body, card title, message body |
 | `--fs-xl` | `1.125rem` | 18 | Section heading (sources head, group eyebrow) |
 | `--fs-2xl` | `1.25rem` | 20 | Panel title (calibration panel title, large UI headings) |
@@ -186,7 +186,24 @@ These stay unitless numbers. They describe the SVG coordinate system, not CSS le
 
 ## 6. Colors
 
-**Unchanged.** The color system in `tokens.css` (`--bg-*`, `--ink-*`, `--trusted/mostly/low`, `--accent`, washes, hairlines) is already well-structured and used consistently. Any future color additions must go in that block with a clear semantic name — never hardcode a hex inline.
+**Linear dark base** (revised 2026-05 for the user-test redesign). Grounded in W10 lecture: *use few colors · 60-30-10 · WCAG AA ≥ 4.5:1 · denotative red/green*. **Every color in the app resolves from `tokens.css` — never hardcode a hex/rgba inline** (the only allowed literals are shadow/overlay alphas). Trust tints derive from tokens via `color-mix(...)`.
+
+### 6.1 Roles
+
+| Group | Tokens | Role |
+|---|---|---|
+| Canvas (60%) | `--bg-0..4`, `--bg-user`, `--surface-raise` | Neutral near-black surfaces (`#08090A`→`#1F2024`). |
+| Text | `--ink-1..5` | `#E6E6E8`→faint. ink-1/2/3/4 verified AA on `--bg-2`. |
+| Accent (one only) | `--accent` `#7C8AF0` (text/links/icons/focus), `--accent-strong` `#5E6AD2` (button fill), `--accent-hover`, `--accent-ink` (text on fill), `--accent-dim`, `--accent-line` | Single indigo. **Deliberately distinct from the trust greens** so "interactive" never reads as "trusted". |
+| Trust (signalling ONLY) | `--trusted` `#4DC78C`, `--mostly` `#E8A838`, `--low` `#E55959` + `-wash` (.14) + `-hl` (.18) | AI verdict 🟢🟡🔴. Denotative (green=ok, red=risk). Never used for non-trust accents. |
+| Verdict aliases | `--verdict-trusted/mostly/low` | = trust tokens (legacy references). |
+| Community score bands | `--score-high/mid/low` (= trust trio) | Donut color encodes the **score** (≥75 / 40-74 / <40) — redundant with the number. Kept visually separate from the AI verdict meaning. |
+| Paper (cream reader) | `--paper`, `--paper-ink`, `--paper-ink-2/3`, `--paper-label`, `--paper-rule` | Light reading context for the source paper. |
+
+### 6.2 Contrast (verified on `--bg-2` `#0F1011`)
+ink-1 ≈ 15:1 (AAA) · ink-2 ≈ 11:1 · ink-3 ≈ 5.9:1 (AA) · ink-4 ≈ 4.6:1 (AA) · accent ≈ 6.1:1 · trusted ≈ 8.9 · mostly ≈ 9.2 · low ≈ 5.4 · white-on-`--accent-strong` ≈ 4.7:1 (AA). Re-verify any new color before shipping.
+
+**Theme:** dark is the only tuned theme. `[data-theme="light"]` overrides exist but are out of scope for the user test.
 
 ---
 

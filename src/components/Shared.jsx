@@ -22,12 +22,19 @@ export function ChipDivergence() {
   );
 }
 
-export function Donut({ pct = 0, size = 34, stroke = 4 }) {
+// Community score → trust band → color (redundant coding: color + number).
+export function scoreBand(score) {
+  return score >= 75 ? 'high' : score >= 40 ? 'mid' : 'low';
+}
+const BAND_VAR = { high: 'var(--score-high)', mid: 'var(--score-mid)', low: 'var(--score-low)' };
+
+export function Donut({ pct = 0, size = 34, stroke = 4, color }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const fill = c * (pct / 100);
+  const col = color || BAND_VAR[scoreBand(pct)];
   return (
-    <div className="donut" style={{ width: size, height: size }}>
+    <div className="donut" style={{ width: size, height: size, '--donut-color': col }}>
       <svg width={size} height={size}>
         <circle className="donut-track" cx={size / 2} cy={size / 2} r={r} strokeWidth={stroke} />
         <circle
@@ -42,10 +49,11 @@ export function Donut({ pct = 0, size = 34, stroke = 4 }) {
   );
 }
 
-export function DonutScore({ score, voted, size = 34, dataAttr = {} }) {
+export function DonutScore({ score, voted, size = 34, stroke = 4, dataAttr = {} }) {
+  const col = BAND_VAR[scoreBand(score)];
   return (
-    <span className="donut-row" {...dataAttr}>
-      <Donut pct={score} size={size} />
+    <span className="donut-row" style={{ color: col }} {...dataAttr}>
+      <Donut pct={score} size={size} stroke={stroke} color={col} />
       <span className="score-stack">
         <span className="donut-num">{score}%</span>
         <span className="donut-voted">{voted} voted</span>
@@ -58,6 +66,33 @@ export function FlagBanner({ children, applied }) {
   return <span className={`flag-banner ${applied ? "flag-banner--applied" : ""}`}>{children}</span>;
 }
 
+/* Generating / regenerating placeholder shown in the answer slot */
+export function GeneratingBubble({ label = "Generating…" }) {
+  return (
+    <div className="chat-ai chat-ai--loading">
+      <span className="gen-dots" aria-hidden="true"><span /><span /><span /></span>
+      <span className="gen-label">{label}</span>
+    </div>
+  );
+}
+
+/* Trust filter chip for the verification toolbar */
+const FILTER_LABEL = { trusted: "Trusted", mostly: "Mostly", low: "Low" };
+export function FilterChip({ label, verdict, n, active, onClick }) {
+  return (
+    <button
+      type="button"
+      className={`filter-chip ${active ? "filter-chip--active" : ""} ${verdict ? `filter-chip--${verdict}` : ""}`}
+      onClick={onClick}
+      aria-pressed={active}
+    >
+      {verdict && <span className={`filter-dot filter-dot--${verdict}`} />}
+      <span className="filter-chip-label">{label ?? FILTER_LABEL[verdict]}</span>
+      <span className="filter-chip-n">{n}</span>
+    </button>
+  );
+}
+
 /* =========================================================
    Source Card (shared shell)
    ========================================================= */
@@ -65,18 +100,29 @@ export function SourceCard({
   source, excluded, active, compact, showActions = true,
   onOpen, onCalibrate, onExclude, onRestore, onHover, onLeave,
   tour = false,
+  selecting = false, selected = false, onToggleSelect,
 }) {
+  const clickable = selecting ? !!onToggleSelect : !!onOpen;
   return (
     <div
-      className={`src-card ${excluded ? "src-card--excluded" : ""} ${active ? "src-card--active" : ""}`}
+      className={`src-card ${excluded ? "src-card--excluded" : ""} ${active ? "src-card--active" : ""} ${selecting ? "src-card--selectable" : ""} ${selected ? "src-card--selected" : ""}`}
       data-verdict={source.verdict}
       data-src-id={source.id}
       {...(tour ? { "data-ftux-target": "open" } : {})}
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
-      onClick={onOpen}
-      style={{ cursor: onOpen ? "pointer" : "default" }}
+      onClick={selecting ? onToggleSelect : onOpen}
+      style={{ cursor: clickable ? "pointer" : "default" }}
     >
+      {selecting && (
+        <span className={`src-check ${selected ? "src-check--on" : ""}`} aria-hidden="true">
+          {selected && (
+            <svg viewBox="0 0 10 10" fill="none" style={{ width: 'var(--ic-xs)', height: 'var(--ic-xs)' }}>
+              <path d="M2 5.2l2 2 4-4.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </span>
+      )}
       <div className="src-rail" />
       <div className="src-body">
         <div className="src-head">
@@ -124,6 +170,7 @@ export function HighlightedParagraph({ spans, onHlEnter, onHlLeave, onHlClick, a
             key={i}
             className={`hl hl--${verdict} ${active ? "hl--active" : ""} ${s.updated ? "hl--updated" : ""}`}
             data-claim={s.claim}
+            title={s.updated ? "Revised after your source changes" : undefined}
             onMouseEnter={() => onHlEnter && onHlEnter(s.claim)}
             onMouseLeave={() => onHlLeave && onHlLeave()}
             onClick={() => onHlClick && onHlClick(s.claim)}
@@ -160,10 +207,22 @@ export function ChatAI({ banner, paragraphs, onHlEnter, onHlLeave, onHlClick, ac
   );
 }
 
-export function Composer({ placeholder = "Reply to VerifAI", hint }) {
+export function Composer({ value, onChange, onFocus, onSend, placeholder = "Reply to VerifAI", hint, disabled = false }) {
+  const handleKey = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!disabled && onSend) onSend(); }
+  };
   return (
     <div className="composer">
-      <textarea className="composer-input" rows={2} placeholder={placeholder} defaultValue="" />
+      <textarea
+        className="composer-input"
+        rows={2}
+        placeholder={placeholder}
+        value={value ?? ""}
+        onChange={(e) => onChange && onChange(e.target.value)}
+        onFocus={onFocus}
+        onClick={onFocus}
+        onKeyDown={handleKey}
+      />
       <div className="composer-actions">
         <div className="composer-left">
           <button className="icon-btn" title="Attach">
@@ -173,7 +232,7 @@ export function Composer({ placeholder = "Reply to VerifAI", hint }) {
           </button>
           {hint && <span style={{ color: "var(--ink-4)", fontSize: 'var(--fs-xs)' }}>{hint}</span>}
         </div>
-        <button className="composer-send" title="Send">
+        <button className="composer-send" title="Send" onClick={() => { if (!disabled && onSend) onSend(); }} disabled={disabled}>
           <svg className="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 19V5M5 12l7-7 7 7" />
           </svg>
@@ -228,8 +287,8 @@ export function HistorySidebar({ narrow, onToggle, activeTitle }) {
         <div className="history-user">
           <div className="history-avatar">JK</div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-1)" }}>Jaewon Kim</div>
-            <div style={{ fontSize: 10, color: "var(--ink-4)" }}>Graduate · Calibrated 47×</div>
+            <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 500, color: "var(--ink-1)" }}>Jaewon Kim</div>
+            <div style={{ fontSize: 'var(--fs-eyebrow)', color: "var(--ink-4)" }}>Graduate · Calibrated 47×</div>
           </div>
         </div>
       </div>
@@ -471,13 +530,13 @@ export function CoachTip({ step, total, title, body, onNext, onSkip, lastLabel =
       </div>
       <div className="coach-tip-body">{body}</div>
       <div className="coach-tip-foot">
-        <button className="btn btn-ghost" style={{ padding: "6px 10px", fontSize: 12 }} onClick={onSkip}>Skip tour</button>
+        <button className="btn btn-ghost" style={{ padding: 'var(--sp-2) var(--sp-3)', fontSize: 'var(--fs-xs)' }} onClick={onSkip}>Skip tour</button>
         <div className="coach-dots">
           {Array.from({ length: total }).map((_, i) => (
             <span key={i} className={`coach-dot ${i < step ? "coach-dot--active" : ""}`} />
           ))}
         </div>
-        <button className="btn btn-primary" style={{ padding: "7px 14px", fontSize: 12 }} onClick={onNext}>
+        <button className="btn btn-primary" style={{ padding: 'var(--sp-2) var(--sp-4)', fontSize: 'var(--fs-xs)' }} onClick={onNext}>
           {step === total ? lastLabel : "Next →"}
         </button>
       </div>

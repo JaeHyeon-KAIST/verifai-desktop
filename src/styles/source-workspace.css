@@ -57,8 +57,9 @@
   gap: var(--sp-2);
 }
 .sw-crumb-title {
-  font-family: var(--font-serif);
-  font-size: var(--fs-xl);
+  font-family: var(--font-ui);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-lg);
   color: var(--ink-1);
   line-height: var(--lh-tight);
   white-space: nowrap;
@@ -189,7 +190,7 @@
   font-size: var(--fs-eyebrow);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #8d7a3a;
+  color: var(--paper-label);
   font-weight: var(--fw-bold);
   margin-bottom: var(--sp-3);
   display: inline-flex;
@@ -211,13 +212,13 @@
   font-family: var(--font-ui);
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
-  color: #6a6a78;
+  color: var(--paper-ink-2);
   display: flex;
   flex-wrap: wrap;
   gap: 2px var(--sp-3);
   align-items: center;
 }
-.sw-paper-byline-dot { color: #c9c4b1; }
+.sw-paper-byline-dot { color: var(--paper-ink-3); }
 
 .sw-paper-body {
   padding: var(--sp-6) var(--sp-10) var(--sp-10);
@@ -229,31 +230,23 @@
   font-weight: var(--fw-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #8d7a3a;
+  color: var(--paper-label);
   margin: var(--sp-6) 0 var(--sp-3);
 }
 .sw-paper-body p {
-  font-family: Georgia, 'Iowan Old Style', 'DM Serif Display', serif;
+  font-family: var(--font-serif);
   font-size: var(--fs-lg);
   line-height: var(--lh-relaxed);
   color: var(--paper-ink);
   margin: 0 0 var(--sp-4);
   text-wrap: pretty;
-  /* Academic paper feel — justify + aggressive hyphenation so word gaps
-     don't blow up on wide lines. Last line stays left-aligned. */
-  text-align: justify;
-  text-align-last: left;
-  hyphens: auto;
-  -webkit-hyphens: auto;
-  -ms-hyphens: auto;
-  hyphenate-limit-chars: 6 3 2;
-  -webkit-hyphenate-limit-before: 3;
-  -webkit-hyphenate-limit-after: 2;
+  /* Left-aligned for steady rhythm (readability > justified rivers). */
+  text-align: left;
 }
 
 /* AI-cited passage — tint by verdict */
 .sw-cite {
-  background: rgba(232, 168, 56, 0.22);
+  background: color-mix(in srgb, var(--mostly) 22%, transparent);
   border-bottom: 2px solid var(--mostly);
   padding: 0 2px;
   border-radius: 2px;
@@ -262,15 +255,15 @@
   transition: background 140ms ease;
 }
 .sw-cite:hover, .sw-cite:focus-visible {
-  background: rgba(232, 168, 56, 0.38);
+  background: color-mix(in srgb, var(--mostly) 38%, transparent);
   outline: none;
 }
-.sw-cite--low  { background: rgba(229, 89, 89, 0.20); border-bottom-color: var(--low); }
-.sw-cite--low:hover, .sw-cite--low:focus-visible { background: rgba(229, 89, 89, 0.36); }
-.sw-cite--mid  { background: rgba(232, 168, 56, 0.22); border-bottom-color: var(--mostly); }
-.sw-cite--mid:hover, .sw-cite--mid:focus-visible { background: rgba(232, 168, 56, 0.38); }
-.sw-cite--high { background: rgba(77, 199, 140, 0.20); border-bottom-color: var(--trusted); }
-.sw-cite--high:hover, .sw-cite--high:focus-visible { background: rgba(77, 199, 140, 0.36); }
+.sw-cite--low  { background: color-mix(in srgb, var(--low) 20%, transparent); border-bottom-color: var(--low); }
+.sw-cite--low:hover, .sw-cite--low:focus-visible { background: color-mix(in srgb, var(--low) 36%, transparent); }
+.sw-cite--mid  { background: color-mix(in srgb, var(--mostly) 22%, transparent); border-bottom-color: var(--mostly); }
+.sw-cite--mid:hover, .sw-cite--mid:focus-visible { background: color-mix(in srgb, var(--mostly) 38%, transparent); }
+.sw-cite--high { background: color-mix(in srgb, var(--trusted) 20%, transparent); border-bottom-color: var(--trusted); }
+.sw-cite--high:hover, .sw-cite--high:focus-visible { background: color-mix(in srgb, var(--trusted) 36%, transparent); }
 
 .sw-cite-tip {
   position: absolute;
@@ -444,11 +437,11 @@
 
 /* "This source backs" quote card */
 .sw-claim-box {
-  margin-top: var(--sp-4);
-  padding: var(--sp-3);
+  margin-top: var(--sp-3);
+  padding: var(--sp-4);
   background: var(--bg-3);
   border-left: 3px solid var(--ink-4);
-  border-radius: 0 var(--r-2) var(--r-2) 0;
+  border-radius: var(--r-3);
   font-family: var(--font-serif);
   font-size: var(--fs-md);
   line-height: 1.45;
@@ -469,7 +462,7 @@
 .sw-diverge {
   margin-top: var(--sp-3);
   padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--r-2);
+  border-radius: var(--r-3);
   background: var(--low-wash);
   border: 1px solid color-mix(in oklch, var(--low) 24%, var(--line));
 }
@@ -553,79 +546,55 @@
   color: var(--ink-3);
   font-weight: var(--fw-bold);
 }
-.sw-comm-body {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  padding: var(--sp-3) var(--sp-4);
-  background: var(--bg-3);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-3);
-}
-.sw-comm-donut { flex-shrink: 0; }
-.sw-comm-breakdown {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-}
-.sw-comm-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--fs-xs);
-  color: var(--ink-2);
-}
-.sw-comm-row-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-.sw-comm-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  display: inline-block;
-}
-.sw-comm-row-val {
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-1);
-  font-weight: var(--fw-medium);
-}
-.sw-comm-pct {
-  font-family: var(--font-sans);
-  font-size: var(--fs-3xl);
-  font-weight: var(--fw-bold);
-  color: var(--ink-1);
-  letter-spacing: -0.01em;
-}
-.sw-comm-pct-unit {
-  font-size: var(--fs-sm);
-  color: var(--ink-2);
-  font-weight: var(--fw-medium);
-  margin-left: 1px;
-}
-.sw-comm-meta {
-  font-size: var(--fs-xs);
-  color: var(--ink-3);
-}
-.sw-comm-bar {
-  height: 4px;
-  border-radius: var(--r-pill);
-  background: var(--bg-3);
-  overflow: hidden;
-  margin-top: 2px;
-}
-.sw-comm-bar-fill {
-  display: block;
-  height: 100%;
-  background: var(--mostly);
-  transition: width 0.3s ease;
-}
+/* (Legacy .sw-comm-body/donut/breakdown/row/pct/meta/bar styles removed — unused.) */
 
 /* Signals wrapper */
 .sw-signals { margin-top: var(--sp-4); }
+
+/* Community — 3-way proportion bar (Trust / Mixed / Distrust) */
+.sw-comm-stack {
+  display: flex;
+  height: 6px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  background: var(--bg-2);
+}
+.sw-comm-stack-seg { display: block; min-width: 2px; }
+
+/* Excluded state — dim the paper + flag it in the side panel */
+.sw-paper-col--excluded .sw-paper {
+  opacity: 0.4;
+  filter: grayscale(0.7);
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+/* "Excluded" tag replaces the verdict pill in place (no row shift) */
+.sw-excluded-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-pill);
+  background: var(--bg-4);
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+.sw-excluded-tag svg { width: var(--ic-xs); height: var(--ic-xs); flex-shrink: 0; }
+/* Restore stays in the exact Exclude slot (same size/position) so a mis-click
+   is undone without moving the cursor. Soft accent — not a loud fill. */
+.sw-dabtn--restore {
+  background: var(--accent-dim);
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+.sw-dabtn--restore:hover {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* Calibrate keeps its footprint while excluded so Restore doesn't shift */
+.sw-dabtn--ghostslot { visibility: hidden; pointer-events: none; }
 
 /* ============================================================
    Tabs
@@ -682,7 +651,8 @@
   color: var(--accent);
 }
 .sw-chat-empty-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
+  font-weight: var(--fw-bold);
   font-size: var(--fs-lg);
   color: var(--ink-1);
   margin-bottom: var(--sp-1);
@@ -743,7 +713,7 @@
 .sw-msg-ai-ref {
   margin-top: var(--sp-2);
   padding: var(--sp-2) var(--sp-3);
-  background: rgba(232, 168, 56, 0.10);
+  background: var(--bg-3);
   border-left: 2px solid var(--mostly);
   border-radius: 0 var(--r-2) var(--r-2) 0;
   font-family: var(--font-serif);
@@ -756,7 +726,7 @@
   font-size: var(--fs-eyebrow);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #99661a;
+  color: var(--paper-label);
   font-weight: var(--fw-bold);
   display: block;
   margin-bottom: var(--sp-1);
@@ -768,14 +738,20 @@
   flex-direction: column;
   gap: var(--sp-4);
 }
-.sw-community-donut-row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
+.sw-comm-card {
+  margin-top: var(--sp-2);
   padding: var(--sp-4);
   background: var(--bg-3);
   border: 1px solid var(--line);
   border-radius: var(--r-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.sw-community-donut-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
 }
 .sw-community-stats {
   flex: 1;
@@ -991,7 +967,7 @@
   box-shadow: 0 2px 4px rgba(20,20,40,0.04), 0 18px 40px rgba(20,20,40,0.06);
 }
 [data-theme="light"] .sw-paper-kind,
-[data-theme="light"] .sw-paper-body h3 { color: #a6872d; }
+[data-theme="light"] .sw-paper-body h3 { color: var(--paper-label); }
 [data-theme="light"] .sw-cite-tag { background: rgba(255,255,255,0.85); }
 
 /* Reduced motion */

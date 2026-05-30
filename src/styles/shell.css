@@ -71,7 +71,7 @@
   gap: var(--sp-2);
   cursor: pointer;
 }
-.history-new:hover { background: rgba(45, 212, 191, 0.16); }
+.history-new:hover { background: var(--accent-dim); }
 .history-new-narrow {
   margin-top: var(--sp-4);
   width: 2.25rem; height: 2.25rem;         /* 36px */
@@ -89,7 +89,7 @@
   padding: var(--sp-3) var(--sp-3) var(--sp-2);
 }
 .history-group { margin-bottom: var(--sp-5); }
-.history-eyebrow { padding: 0 var(--sp-3) var(--sp-2); color: #668c99; }
+.history-eyebrow { padding: 0 var(--sp-3) var(--sp-2); color: var(--ink-3); }
 .history-item {
   display: block;
   width: 100%;
@@ -125,8 +125,8 @@
 .history-avatar {
   width: 2rem; height: 2rem;               /* 32px */
   border-radius: 50%;
-  background: linear-gradient(135deg, #e8a838 0%, #2dd4bf 100%);
-  color: #0f2b26;
+  background: var(--accent-strong);
+  color: var(--accent-ink);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -155,8 +155,10 @@
   background: var(--bg-2);
 }
 .chat-head-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
+  font-weight: var(--fw-bold);
   font-size: var(--fs-2xl);
+  letter-spacing: -0.01em;
   color: var(--ink-1);
 }
 .chat-head-meta {
@@ -193,169 +195,8 @@
 }
 .chat-compose-inner { max-width: 780px; margin: 0 auto; }
 
-/* ==========================================================
-   Source pane (used differently by each variation)
-   ========================================================== */
-.sources-head {
-  padding: var(--sp-5) var(--sp-6) var(--sp-4);
-  border-bottom: 1px solid var(--hairline);
-  flex-shrink: 0;
-}
-.sources-head-title {
-  font-family: var(--font-serif);
-  font-size: var(--fs-xl);
-  color: var(--ink-1);
-}
-.sources-head-quote {
-  font-size: var(--fs-xs);
-  color: var(--mostly);
-  margin-top: var(--sp-2);
-  line-height: var(--lh-normal);
-  font-style: italic;
-}
-.sources-head-meta {
-  font-size: var(--fs-xs);
-  color: var(--ink-4);
-  margin-top: var(--sp-3);
-  display: flex;
-  gap: var(--sp-4);
-  align-items: center;
-}
-.sources-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--sp-4) var(--sp-4) var(--sp-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-}
-
-/* ==========================================================
-   Source Detail reader (paper view)
-   ========================================================== */
-.detail {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-2);
-}
-.detail-head {
-  padding: var(--sp-5) var(--sp-6) var(--sp-4);
-  border-bottom: 1px solid var(--hairline);
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-.detail-head-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sp-4);
-}
-.detail-back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  color: var(--accent);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  margin-bottom: var(--sp-1);
-}
-.detail-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--ink-1); }
-.detail-journal { font-size: var(--fs-xs); color: var(--ink-3); margin-top: 2px; }
-.detail-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--sp-5) var(--sp-6) var(--sp-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
-}
-.detail-doi-card {
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--r-2);
-  background: var(--bg-3);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--fs-xs);
-}
-.detail-doi-card .mono { color: var(--accent); }
-.paper {
-  border-radius: var(--r-3);
-  background: var(--paper);
-  color: var(--paper-ink);
-  padding: var(--sp-6) var(--sp-8);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-relaxed);
-  font-family: Georgia, 'DM Serif Display', serif;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-}
-.paper-head {
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-bold);
-  font-family: var(--font-sans);
-  color: #4b4b5a;
-  margin-bottom: -6px;
-  letter-spacing: 0.01em;
-}
-.paper-cited {
-  padding: var(--sp-3) var(--sp-3);
-  background: rgba(232, 168, 56, 0.15);
-  border-left: 3px solid var(--mostly);
-  border-radius: var(--r-1);
-  font-weight: var(--fw-medium);
-}
-.paper-cited-label {
-  font-size: var(--fs-eyebrow);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #99661a;
-  font-weight: var(--fw-medium);
-  display: block;
-  margin-bottom: var(--sp-1);
-  font-family: var(--font-sans);
-}
-.discrepancy {
-  border-radius: var(--r-3);
-  background: var(--bg-3);
-  padding: var(--sp-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-}
-.discrepancy-label {
-  font-size: var(--fs-eyebrow);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--mostly);
-  font-weight: var(--fw-medium);
-}
-.discrepancy-row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  font-size: var(--fs-sm);
-}
-.discrepancy-row .lbl {
-  width: 6.25rem;                          /* 100px */
-  color: var(--ink-3);
-  font-size: var(--fs-xs);
-}
-.discrepancy-row.ai .val   { color: var(--mostly); font-weight: var(--fw-medium); }
-.discrepancy-row.src .val  { color: var(--accent); font-weight: var(--fw-medium); }
-.detail-foot {
-  padding: var(--sp-4) var(--sp-6) var(--sp-6);
-  border-top: 1px solid var(--hairline);
-  background: var(--bg-2);
-  flex-shrink: 0;
-  display: flex;
-  gap: var(--sp-3);
-  justify-content: flex-end;
-}
+/* (Legacy .sources-* / .detail* / .paper / .discrepancy styles removed —
+   superseded by the SourceWorkspace .sw-* system. No JSX references remained.) */
 
 /* ==========================================================
    Calibration panel (modal + slide-in)
@@ -405,6 +246,8 @@
   box-shadow: 0 0 0 3px var(--accent-dim);
 }
 .calibration-title {
+  font-family: var(--font-ui);
+  font-weight: var(--fw-bold);
   font-size: var(--fs-2xl);
   line-height: var(--lh-tight);
   color: var(--ink-1);
@@ -461,8 +304,8 @@
   margin: var(--sp-4) var(--sp-6) 0;
   padding: var(--sp-3) var(--sp-4);
   border-radius: var(--r-2);
-  background: rgba(239, 68, 68, 0.06);
-  border: 1px solid rgba(239, 68, 68, 0.18);
+  background: var(--low-wash);
+  border: 1px solid color-mix(in srgb, var(--low) 24%, transparent);
 }
 .calibration-divergence-row {
   display: flex;
@@ -574,11 +417,11 @@
 }
 .calibration-score-delta.up {
   color: var(--trusted);
-  background: rgba(45, 212, 191, 0.12);
+  background: var(--trusted-wash);
 }
 .calibration-score-delta.down {
   color: var(--low);
-  background: rgba(229, 89, 89, 0.12);
+  background: var(--low-wash);
 }
 
 /* Slider with verdict band */
@@ -612,9 +455,9 @@
   height: 100%;
   position: relative;
 }
-.calibration-band-seg--low  { background: rgba(239, 68, 68, 0.32); }
-.calibration-band-seg--mid  { background: rgba(245, 158, 11, 0.32); }
-.calibration-band-seg--high { background: rgba(45, 212, 191, 0.32); }
+.calibration-band-seg--low  { background: color-mix(in srgb, var(--low) 34%, transparent); }
+.calibration-band-seg--mid  { background: color-mix(in srgb, var(--mostly) 34%, transparent); }
+.calibration-band-seg--high { background: color-mix(in srgb, var(--trusted) 34%, transparent); }
 .calibration-band-seg + .calibration-band-seg::before {
   content: "";
   position: absolute;
@@ -831,11 +674,11 @@
 }
 .calibration-impact-delta.up {
   color: var(--trusted);
-  background: rgba(45, 212, 191, 0.12);
+  background: var(--trusted-wash);
 }
 .calibration-impact-delta.down {
   color: var(--low);
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--low-wash);
 }
 
 .calibration-foot {
@@ -904,8 +747,10 @@
 .v-margin .margin-col {
   width: 21.25rem;                         /* 340px */
   flex-shrink: 0;
-  overflow-y: auto;
-  padding: var(--sp-8) var(--sp-5) var(--sp-10);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;                        /* inner regions scroll */
   position: relative;
   border-left: 1px solid var(--hairline);
   background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 100%);
@@ -915,8 +760,152 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-4);
-  margin-bottom: var(--sp-4);
   padding-left: var(--sp-1);
+}
+
+/* Sticky verification toolbar (filter + select) */
+.v-margin .margin-toolbar {
+  flex: none;
+  padding: var(--sp-5) var(--sp-5) var(--sp-3);
+  border-bottom: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  background: var(--bg-1);
+}
+.v-margin .margin-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.v-margin .mt-select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  align-self: flex-start;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--ink-2);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.v-margin .mt-select svg { width: var(--ic-sm); height: var(--ic-sm); flex-shrink: 0; }
+.v-margin .mt-select:hover { background: var(--bg-4); color: var(--ink-1); }
+.v-margin .mt-select--on {
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-color: var(--accent-line);
+}
+/* Select-mode action row: [Done] [n selected] ... [Exclude] */
+.v-margin .mt-select-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.v-margin .mt-sel-count {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--ink-3);
+}
+.v-margin .mt-sel-exclude {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--low);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-pill);
+  background: var(--low-wash);
+  border: 1px solid color-mix(in srgb, var(--low) 30%, var(--line));
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.v-margin .mt-sel-exclude:hover { background: color-mix(in srgb, var(--low) 20%, transparent); border-color: var(--low); }
+.v-margin .mt-sel-exclude svg { width: var(--ic-sm); height: var(--ic-sm); flex-shrink: 0; }
+.v-margin .filter-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.v-margin .mt-quicklow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--low);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-pill);
+  background: var(--low-wash);
+  border: 1px solid color-mix(in srgb, var(--low) 30%, var(--line));
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.v-margin .mt-quicklow:hover { background: color-mix(in srgb, var(--low) 20%, transparent); }
+.v-margin .mt-quicklow svg { width: var(--ic-sm); height: var(--ic-sm); flex-shrink: 0; }
+.v-margin .mt-quicklow--restore {
+  color: var(--ink-2);
+  background: var(--bg-3);
+  border-color: var(--line);
+}
+.v-margin .mt-quicklow--restore:hover { background: var(--bg-4); color: var(--ink-1); }
+
+/* Scrolling claim-group region */
+.v-margin .margin-groups {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--sp-5) var(--sp-5) var(--sp-10);
+}
+
+/* Empty state (before answer is ready) */
+.v-margin .margin-empty {
+  flex: 1;
+  padding: var(--sp-8) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.v-margin .margin-empty-note {
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  color: var(--ink-4);
+}
+
+/* Bulk action bar (selection mode) */
+.v-margin .bulk-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-5);
+  border-top: 1px solid var(--line);
+  background: var(--bg-3);
+}
+.v-margin .bulk-count {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--ink-1);
+}
+.v-margin .bulk-actions { display: flex; gap: var(--sp-2); }
+
+/* Chat empty hero (before the question is sent) */
+.chat-hero {
+  margin: auto;
+  max-width: 30rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-8) var(--sp-4);
+}
+.chat-hero-title {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  color: var(--ink-2);
+  letter-spacing: -0.01em;
+}
+.chat-hero-sub {
+  font-size: var(--fs-md);
+  line-height: var(--lh-relaxed);
+  color: var(--ink-4);
 }
 .v-margin .margin-card {
   margin-bottom: var(--sp-4);
@@ -928,49 +917,7 @@
 }
 .v-margin .margin-anchor-wrap { position: relative; }
 
-/* ==========================================================
-   Claim tabs
-   ========================================================== */
-.claim-tabs {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--sp-3) var(--sp-4) var(--sp-2);
-  background: var(--bg-1);
-  border-bottom: 1px solid var(--hairline);
-  flex-shrink: 0;
-}
-.claim-tab {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--r-2);
-  background: transparent;
-  color: var(--ink-3);
-  text-align: left;
-  font-size: var(--fs-xs);
-  line-height: 1.4;
-  transition: background 0.12s ease, color 0.12s ease;
-  min-width: 0;
-}
-.claim-tab:hover { background: rgba(255,255,255,0.04); color: var(--ink-1); }
-.claim-tab--active { background: var(--bg-3); color: var(--ink-1); }
-.claim-tab-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  flex-shrink: 0;
-}
-.claim-tab-dot--trusted { background: var(--trusted); }
-.claim-tab-dot--mostly  { background: var(--mostly); }
-.claim-tab-dot--low     { background: var(--low); }
-.claim-tab-label {
-  font-style: italic;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-}
+/* (Legacy .claim-tab* styles removed — unused; claims are shown via .margin-group.) */
 
 /* ==========================================================
    Marginalia — grouped by claim
@@ -984,7 +931,7 @@
 }
 .v-margin .margin-group:last-child { border-bottom: 0; }
 .v-margin .margin-group--focused {
-  background: rgba(45, 212, 191, 0.04);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
 .v-margin .margin-group-head {
   padding: var(--sp-3);
@@ -1020,20 +967,12 @@
 .v-margin .margin-group-head--low     .margin-group-head-row { color: var(--low); }
 
 .v-margin .margin-group-quote {
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
   font-size: var(--fs-md);
-  color: var(--ink-1);
-  font-style: italic;
+  font-weight: var(--fw-medium);
+  color: var(--ink-2);
   line-height: var(--lh-normal);
   letter-spacing: -0.005em;
-}
-.v-margin .margin-group-count {
-  /* legacy class — kept for safety, styling folded into .margin-group-head-row */
-  font-size: var(--fs-eyebrow);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-4);
-  font-weight: var(--fw-medium);
 }
 
 /* ==========================================================
@@ -1046,15 +985,18 @@
   margin-bottom: var(--sp-1);
 }
 
-/* Highlight "updated" glyph */
-.hl--trusted.hl-updated::after {
-  content: '✓';
+/* Highlight "revised" glyph — a regenerate mark (↻), not a verdict.
+   Neutral indigo accent (NOT the verdict --hl-c): it means "this wording was
+   regenerated after your edits", which is orthogonal to trust. A verdict-colored
+   ✓ read as a contradictory "verified" stamp (e.g. red circle + check). */
+.hl--updated::after {
+  content: '↻';
   display: inline-block;
   width: 0.875rem; height: 0.875rem;       /* 14px */
   border-radius: 50%;
-  background: var(--trusted);
-  color: #0f2b1e;
-  font-size: var(--fs-eyebrow);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.625rem;                      /* 10px — arrow reads crisp at this size */
   text-align: center;
   line-height: 0.875rem;
   margin-left: var(--sp-2);

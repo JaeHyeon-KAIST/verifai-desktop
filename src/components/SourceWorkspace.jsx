@@ -187,11 +187,18 @@ function getPaperFor(source) {
   };
 
   return SRC_PAPERS[source.id] || {
-    kind: "Source",
+    kind: source.verdict === "low" ? "Unverified source" : "Source",
     title: source.title,
-    byline: [source.journal || "", source.doi || ""],
-    sections: [],
-    diverge: null,
+    byline: [source.journal || "", source.doi && source.doi !== "—" ? source.doi : null].filter(Boolean),
+    sections: [
+      { h: "Summary", b: source.reason || "No detailed text is available for this source in the prototype." },
+      ...(source.aiSays && source.sourceSays
+        ? [{ h: "Where it diverges", b: `The AI answer reads ${source.aiSays}, but this source actually says ${source.sourceSays}.` }]
+        : []),
+    ],
+    diverge: source.aiSays && source.sourceSays
+      ? { aiSays: source.aiSays, sourceSays: source.sourceSays }
+      : null,
   };
 }
 
@@ -284,9 +291,10 @@ function CommunityBar({ source }) {
   const distrust = Math.max(0, total - trust - mixed);
   return (
     <div className="sw-comm">
-      <div className="sw-comm-label">Community</div>
+      <div className="sw-comm-label">Community · {total} votes</div>
+      <div className="sw-comm-card">
       <div className="sw-community-donut-row">
-        <DonutScore score={score} voted={total} size={58} />
+        <DonutScore score={score} voted={total} size={64} stroke={7} />
         <div className="sw-community-stats">
           <div className="sw-stat-row">
             <span><span className="sw-stat-dot" style={{ background: "var(--trusted)" }} />Trust</span>
@@ -301,6 +309,12 @@ function CommunityBar({ source }) {
             <span className="sw-stat-value">{distrust}</span>
           </div>
         </div>
+      </div>
+      <div className="sw-comm-stack" role="img" aria-label={`Trust ${trust}, Mixed ${mixed}, Distrust ${distrust}`}>
+        {trust > 0 && <span className="sw-comm-stack-seg" style={{ flexGrow: trust, background: "var(--trusted)" }} />}
+        {mixed > 0 && <span className="sw-comm-stack-seg" style={{ flexGrow: mixed, background: "var(--mostly)" }} />}
+        {distrust > 0 && <span className="sw-comm-stack-seg" style={{ flexGrow: distrust, background: "var(--low)" }} />}
+      </div>
       </div>
     </div>
   );
@@ -323,10 +337,12 @@ function DivergencePanel({ paper }) {
 function SignalPanel({ source, paper }) {
   return (
     <>
+      {/* Divergence first — the AI-vs-source mismatch is the most decision-
+         relevant signal for trust calibration, so surface it above votes. */}
+      <DivergencePanel paper={paper} />
       <div className="sw-signals">
         <CommunityBar source={source} />
       </div>
-      <DivergencePanel paper={paper} />
     </>
   );
 }
@@ -425,7 +441,7 @@ export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude
       </div>
 
       <div className="sw-body">
-        <div className="sw-paper-col" ref={paperColRef}>
+        <div className={`sw-paper-col ${excluded ? 'sw-paper-col--excluded' : ''}`} ref={paperColRef}>
           <div className="sw-paper">
             <div className="sw-paper-meta">
               <div className="sw-paper-kind">
@@ -496,18 +512,22 @@ export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude
         <div className="sw-side">
           <div className="sw-meta">
             <div className="sw-meta-top">
-              <VerdictPill verdict={verdict} label={source.verdictLabel} />
+              {excluded
+                ? <span className="sw-excluded-tag"><IconExclude /> Excluded</span>
+                : <VerdictPill verdict={verdict} label={source.verdictLabel} />}
               <div className="sw-meta-top-actions">
                 <button
-                  className="sw-dabtn sw-dabtn--ghost"
+                  className={`sw-dabtn ${excluded ? "sw-dabtn--restore" : "sw-dabtn--ghost"}`}
                   onClick={() => onExclude && onExclude(source)}
-                  title={excluded ? "Restore this source" : "Exclude from AI answer"}
+                  title={excluded ? "Restore this source to the answer" : "Exclude from AI answer"}
                 >
                   {excluded ? (<><IconRestore /> Restore</>) : (<><IconExclude /> Exclude</>)}
                 </button>
                 <button
-                  className="sw-dabtn sw-dabtn--primary"
-                  onClick={() => onCalibrate && onCalibrate(source)}
+                  className={`sw-dabtn sw-dabtn--primary ${excluded ? "sw-dabtn--ghostslot" : ""}`}
+                  onClick={() => { if (!excluded && onCalibrate) onCalibrate(source); }}
+                  aria-hidden={excluded ? "true" : undefined}
+                  tabIndex={excluded ? -1 : 0}
                 >
                   <IconCalibrate /> Calibrate
                 </button>
@@ -521,7 +541,7 @@ export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude
               </div>
               <div>
                 <div className="sw-meta-cell-label">Published in</div>
-                <div className="sw-meta-cell-value sw-meta-cell-value--wrap" style={{ color: "var(--ink-2)", fontWeight: 400, fontSize: 12 }}>
+                <div className="sw-meta-cell-value sw-meta-cell-value--wrap" style={{ color: "var(--ink-2)", fontWeight: 400, fontSize: 'var(--fs-xs)' }}>
                   {source.journal}
                 </div>
               </div>
