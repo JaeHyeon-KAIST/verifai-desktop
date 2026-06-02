@@ -316,6 +316,19 @@
 .regen-dock-btn:active { transform: translateY(1px); }
 .regen-dock-btn svg { width: var(--ic-sm); height: var(--ic-sm); flex-shrink: 0; }
 
+/* Right verification panel "re-verifying" loader — shown during the regenerate
+   beat so the panel reveals its V2-consistent content together with the answer. */
+.margin-regen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  padding: var(--sp-8) var(--sp-5);
+}
+.margin-regen-label { font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--ink-3); }
+
 @media (prefers-reduced-motion: reduce) {
   .chat-ai-body--stale { transition: none; }
 }

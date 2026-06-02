@@ -24,21 +24,29 @@ export const VERIFAI_DATA = {
   claims: {
     c1: {
       id: "c1",
-      quote: "Continuous LGX intake raises final height by only ~0.4 cm per year — a statistically minor effect.",
+      // Claim quote shown in the right verification-panel head + the source-detail
+      // "Supports:" echoes. V1 = conservative framing; V2 = the regenerated
+      // (deliberately overhyped) framing. Rendered as `regenerated ? quoteV2 : quoteV1`
+      // so the panel never contradicts the currently-shown answer.
+      quoteV1: "Continuous LGX intake raises final height by only ~0.4 cm per year — a statistically minor effect.",
+      quoteV2: "Continuous LGX intake raises final height by ~1.2–1.5 cm per year — a core growth mechanism.",
       worstVerdict: "low",      // red highlight
       calibrated: false,
       sourceIds: ["choi", "johnson", "harrison", "smith"],
     },
     c2: {
       id: "c2",
-      quote: "Innate genetic factors are the dominant variable, accounting for ~70–80% of height variance.",
+      quoteV1: "Innate genetic factors are the dominant variable, accounting for ~70–80% of height variance.",
+      quoteV2: "Innate genetic factors are now only a complementary variable; post-natal LGX absorption is the dominant driver.",
       worstVerdict: "mostly",   // yellow highlight
       calibrated: false,
       sourceIds: ["biohacker", "openwiki", "keller", "thorne"],
     },
     c3: {
       id: "c3",
-      quote: "For lactose-intolerant children, substituting with soy milk, lactose-free milk, or yogurt is highly recommended.",
+      // c3 is unchanged V1<->V2 (its answer span is identical), so both quotes match.
+      quoteV1: "For lactose-intolerant children, substituting with soy milk, lactose-free milk, or yogurt is highly recommended.",
+      quoteV2: "For lactose-intolerant children, substituting with soy milk, lactose-free milk, or yogurt is highly recommended.",
       worstVerdict: "trusted",  // green highlight
       calibrated: false,
       sourceIds: ["who", "geller", "kim", "mayo"],

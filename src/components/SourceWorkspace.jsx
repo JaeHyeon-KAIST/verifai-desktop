@@ -375,7 +375,7 @@ function SignalPanel({ source, paper }) {
 /* ============================================================
    Main component
    ============================================================ */
-export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude, excluded }) {
+export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude, excluded, regenerated }) {
   const [tab, setTab] = useState("ask");
   const selectTab = (t) => { log('workspace_tab', { tab: t }, { target_id: source.id, target_kind: 'source' }); setTab(t); };
   const [messages, setMessages] = useState([]);
@@ -510,7 +510,7 @@ export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude
                             </span>
                             {claimBacks && (
                               <span className="sw-cite-tip-sub">
-                                Supports: <em>"{claimBacks.quote}"</em>
+                                Supports: <em>"{regenerated ? claimBacks.quoteV2 : claimBacks.quoteV1}"</em>
                               </span>
                             )}
                           </span>
@@ -591,7 +591,7 @@ export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude
             {claimBacks && (
               <div className="sw-claim-box">
                 <span className="sw-claim-box-label">This source backs</span>
-                "{claimBacks.quote}"
+                "{regenerated ? claimBacks.quoteV2 : claimBacks.quoteV1}"
               </div>
             )}
 

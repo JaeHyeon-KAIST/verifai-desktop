@@ -163,6 +163,15 @@ function Marginalia({
               {!sent ? '질문을 전송하면 답변의 근거 소스가 신뢰도와 함께 여기에 표시됩니다.' : '답변 생성 중…'}
             </div>
           </div>
+        ) : regenerating ? (
+          /* The right panel "re-verifies" in lockstep with the answer: it shows a
+             loading state during the regenerate beat, then reveals the V2-consistent
+             content together with the new answer. This hides the brief V1->V2
+             swap and reinforces "my curation recomputed the whole verification". */
+          <div className="margin-regen">
+            <span className="gen-dots" aria-hidden="true"><span /><span /><span /></span>
+            <span className="margin-regen-label">변경사항으로 재검증 중…</span>
+          </div>
         ) : (
           <>
             <div className="margin-toolbar">
@@ -237,7 +246,7 @@ function Marginalia({
                         <span className="margin-group-head-dot" />
                         <span>Claim · {groupSources.length} {groupSources.length === 1 ? 'source' : 'sources'}</span>
                       </div>
-                      <div className="margin-group-quote">{c.quote}</div>
+                      <div className="margin-group-quote">{regenerated ? c.quoteV2 : c.quoteV1}</div>
                     </div>
                     {sources.map((s, idx) => (
                       <div key={s.id} className={`margin-card ${activeSrc === s.id ? 'margin-card--focused' : ''}`}>
@@ -708,6 +717,7 @@ function MainApp({ onExit }) {
           onCalibrate={(s) => setCalibrating(s)}
           onExclude={(s) => toggleExclude(s.id)}
           excluded={!!excluded[openDetail.id]}
+          regenerated={regenerated}
         />
       )}
 
