@@ -67,6 +67,41 @@ export function FlagBanner({ children, applied }) {
   return <span className={`flag-banner ${applied ? "flag-banner--applied" : ""}`}>{children}</span>;
 }
 
+/* Manual-regenerate CTAs (dual-anchor). The ↻ refresh glyph mirrors the
+   "revised span" mark used in the answer body, so the action reads as
+   "apply my source edits to the answer". Indigo --accent only (NOT verdict
+   colors); both are layout-docked, never floating. */
+const IconRegen = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" />
+  </svg>
+);
+
+/* Primary trigger — docked at the bottom of the verification panel, directly
+   under the source cards the participant just curated. */
+export function RegenerateDock({ count, onClick }) {
+  return (
+    <div className="regen-dock">
+      <span className="regen-dock-hint">검토한 출처를 반영해 답변을 다시 생성합니다</span>
+      <button className="regen-dock-btn" onClick={onClick}>
+        <IconRegen />
+        답변 재생성 ({count})
+      </button>
+    </div>
+  );
+}
+
+/* Secondary stale cue — a quieter clickable ribbon in the answer banner slot,
+   tying the stale answer (center) to the curation work (right). */
+export function RegenerateRibbon({ count, onClick }) {
+  return (
+    <button className="regen-ribbon" onClick={onClick}>
+      <span className="regen-ribbon-txt"><IconRegen /> 반영 안 된 변경 {count}개</span>
+      <span className="regen-ribbon-go">재생성 →</span>
+    </button>
+  );
+}
+
 /* Generating / regenerating placeholder shown in the answer slot */
 export function GeneratingBubble({ label = "Generating…" }) {
   return (
@@ -191,11 +226,11 @@ export function ChatUser({ text }) {
   return <div className="chat-user">{text}</div>;
 }
 
-export function ChatAI({ banner, paragraphs, onHlEnter, onHlLeave, onHlClick, activeClaim }) {
+export function ChatAI({ banner, paragraphs, onHlEnter, onHlLeave, onHlClick, activeClaim, stale }) {
   return (
     <div className="chat-ai">
       {banner && <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{banner}</div>}
-      <div className="chat-ai-body">
+      <div className={`chat-ai-body ${stale ? "chat-ai-body--stale" : ""}`}>
         {paragraphs.map((spans, i) => (
           <HighlightedParagraph
             key={i} spans={spans}

@@ -12,6 +12,8 @@ import {
   CoachTip,
   GeneratingBubble,
   FilterChip,
+  RegenerateDock,
+  RegenerateRibbon,
 } from './components/Shared.jsx';
 import SourceWorkspace from './components/SourceWorkspace.jsx';
 import { SliderLab } from './components/SliderLab.jsx';
@@ -34,7 +36,7 @@ function Marginalia({
   activeSrc, setActiveSrc,
   excluded, toggleExclude, onCalibrate,
   setOpenDetail, setState,
-  answer, updatedBanner,
+  answer, pending, pendingCount, regenerated, onRegenerate,
   onStartTour,
   composerValue, onComposerChange, onComposerFocus, onSend,
 }) {
@@ -113,15 +115,16 @@ function Marginalia({
                 <ChatAI
                   banner={
                     <div className="ai-banners">
-                      {updatedBanner ? (
-                        <>
-                          <FlagBanner applied>Answer updated · your changes applied</FlagBanner>
-                        </>
+                      {pending ? (
+                        <RegenerateRibbon count={pendingCount} onClick={onRegenerate} />
+                      ) : regenerated ? (
+                        <FlagBanner applied>답변 업데이트됨 · 변경사항 반영</FlagBanner>
                       ) : (
                         <FlagBanner>2 claims flagged for low confidence</FlagBanner>
                       )}
                     </div>
                   }
+                  stale={pending}
                   paragraphs={answer}
                   activeClaim={activeClaim}
                   onHlEnter={setActiveClaim}
@@ -260,6 +263,7 @@ function Marginalia({
                 );
               })}
             </div>
+            {pending && <RegenerateDock count={pendingCount} onClick={onRegenerate} />}
           </>
         )}
       </aside>
@@ -427,6 +431,10 @@ function MainApp({ onExit }) {
   const [activeClaim, setActiveClaim] = useState(null);
   const [activeSrc, setActiveSrc] = useState(null);
   const [excluded, setExcluded] = useState({});
+  // Committed snapshot the SHOWN answer reflects. Live edits (excluded /
+  // calibratedOnce) only become visible after the participant presses Regenerate.
+  const [appliedExcluded, setAppliedExcluded] = useState({});
+  const [appliedCalibrated, setAppliedCalibrated] = useState(false);
   const [calibrating, setCalibrating] = useState(null);
   const [calibratingClosing, setCalibratingClosing] = useState(false);
   const [openDetail, setOpenDetail] = useState(null);
@@ -455,32 +463,40 @@ function MainApp({ onExit }) {
 
   const toggleExclude = (id) => setExcluded((e) => ({ ...e, [id]: !e[id] }));
 
-  // Answer auto-regenerates once the user excludes a source or calibrates one.
-  // The regenerated answer is a fixed dummy (answerV2) — swap that to change it.
-  const excludedCount = Object.values(excluded).filter(Boolean).length;
-  const updated = sent && (excludedCount > 0 || calibratedOnce);
-  const answer = updated ? VERIFAI_DATA.answerV2 : VERIFAI_DATA.answerV1;
+  // ----- manual regenerate (dual-anchor) -----
+  // Edits accumulate as PENDING and do NOT change the answer; the participant
+  // must press Regenerate (the agency / effort-justification moment). The shown
+  // answer reflects only the committed snapshot (appliedExcluded/appliedCalibrated).
+  const pendingIds = [...new Set([...Object.keys(excluded), ...Object.keys(appliedExcluded)])]
+    .filter((id) => !!excluded[id] !== !!appliedExcluded[id]);
+  const pendingCount = pendingIds.length + (calibratedOnce !== appliedCalibrated ? 1 : 0);
+  const pending = sent && !loading && !regenerating && pendingCount > 0;
+  const regenerated = Object.values(appliedExcluded).some(Boolean) || appliedCalibrated;
+  const answer = regenerated ? VERIFAI_DATA.answerV2 : VERIFAI_DATA.answerV1;
 
-  // Brief "regenerating…" animation the first time `updated` flips true.
-  const prevUpdated = useRef(false);
-  useEffect(() => {
-    if (updated && !prevUpdated.current) {
-      prevUpdated.current = true;
-      const exIds = Object.keys(excluded).filter((k) => excluded[k]);
-      log('regenerate', {
-        trigger: excludedCount > 0 ? 'exclude' : 'calibrate',
-        excluded_ids: exIds,
-        excluded_verdicts: exIds.map(_verdictOf),
-        traps_removed: exIds.filter((id) => _verdictOf(id) === 'low'),
-        false_exclusions: exIds.filter((id) => _verdictOf(id) !== 'low'),
-        calibrated_once: calibratedOnce,
-      });
-      setRegenerating(true);
-      const t = setTimeout(() => { setRegenerating(false); log('regenerate_done', {}); }, 1500);
-      return () => clearTimeout(t);
-    }
-    if (!updated) prevUpdated.current = false;
-  }, [updated]);
+  // Pressing Regenerate commits the current edits into the shown answer after a
+  // brief "regenerating…" beat. This is the one event that means "the participant
+  // finished curating and asked for their result" — a clean behavioral signal.
+  const onRegenerate = () => {
+    if (!pending) return;
+    const exIds = Object.keys(excluded).filter((k) => excluded[k]);
+    log('regenerate', {
+      trigger: 'manual',
+      pending_count: pendingCount,
+      excluded_ids: exIds,
+      excluded_verdicts: exIds.map(_verdictOf),
+      traps_removed: exIds.filter((id) => _verdictOf(id) === 'low'),
+      false_exclusions: exIds.filter((id) => _verdictOf(id) !== 'low'),
+      calibrated_once: calibratedOnce,
+    });
+    setRegenerating(true);
+    setTimeout(() => {
+      setAppliedExcluded({ ...excluded });
+      setAppliedCalibrated(calibratedOnce);
+      setRegenerating(false);
+      log('regenerate_done', {});
+    }, 1500);
+  };
 
   // Composer: clicking/focusing the empty input auto-fills the fixed question.
   const onComposerFocus = () => { if (!sent && !composerValue) { log('composer_focus', { autofilled: true }); setComposerValue(VERIFAI_DATA.question); } };
@@ -641,7 +657,7 @@ function MainApp({ onExit }) {
     try { recFile = await stopRecording(pid); } catch (e) { /* recording must never block */ }
     log('recording_saved', { file: recFile });
     const exIds = Object.keys(excluded).filter((k) => excluded[k]);
-    endSession({ final_excluded: exIds, final_excluded_verdicts: exIds.map(_verdictOf), reached_v2: updated, calibrated_once: calibratedOnce });
+    endSession({ final_excluded: exIds, final_excluded_verdicts: exIds.map(_verdictOf), reached_v2: regenerated, pending_at_end: pendingCount, calibrated_once: calibratedOnce });
     await downloadLog();   // await so the browser .jsonl download fires before reset
     resetSession();
     onExit();
@@ -673,7 +689,10 @@ function MainApp({ onExit }) {
           setOpenDetail={setOpenDetail}
           setState={setState}
           answer={answer}
-          updatedBanner={updated}
+          pending={pending}
+          pendingCount={pendingCount}
+          regenerated={regenerated}
+          onRegenerate={onRegenerate}
           onStartTour={startTour}
           composerValue={composerValue}
           onComposerChange={onComposerChange}

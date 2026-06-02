@@ -251,6 +251,75 @@
   line-height: 1;
 }
 
+/* ===== Manual regenerate CTA (dual-anchor) =================
+   The answer auto-regenerated on the first source edit; now edits accumulate
+   as "pending" and the participant must press Regenerate (agency moment).
+   Two anchors: a quiet ribbon on the stale answer + a primary dock under the
+   curated sources. Indigo --accent only (verdict colors stay trust-only). */
+
+/* Stale answer body while changes are pending (light dim, still readable). */
+.chat-ai-body--stale {
+  opacity: 0.55;
+  filter: saturate(0.78);
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+/* Secondary cue: clickable ribbon in the answer banner slot. */
+.regen-ribbon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-2);
+  background: transparent;
+  border: 1px solid var(--accent-line);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.regen-ribbon:hover { background: var(--accent-dim); border-color: var(--accent); }
+.regen-ribbon-txt { display: inline-flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.regen-ribbon-txt svg { width: var(--ic-sm); height: var(--ic-sm); flex-shrink: 0; color: var(--accent); }
+.regen-ribbon-go { color: var(--accent); font-weight: var(--fw-bold); white-space: nowrap; flex-shrink: 0; }
+
+/* Primary trigger: dock at the bottom of the verification panel. */
+.regen-dock {
+  flex: none;
+  border-top: 1px solid var(--line);
+  background: var(--bg-1);
+  padding: var(--sp-3) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.regen-dock-hint { font-size: var(--fs-xs); color: var(--ink-3); line-height: var(--lh-normal); }
+.regen-dock-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-2);
+  background: var(--accent-strong);
+  color: var(--accent-ink);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.05s ease;
+}
+.regen-dock-btn:hover { background: var(--accent-hover); }
+.regen-dock-btn:active { transform: translateY(1px); }
+.regen-dock-btn svg { width: var(--ic-sm); height: var(--ic-sm); flex-shrink: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-ai-body--stale { transition: none; }
+}
+
 /* ===== Chat bubbles ======================================== */
 .chat-user {
   align-self: flex-end;
