@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, Fragment } from 'react';
 import { VERIFAI_DATA } from '../data.js';
+import { log } from '../logger.js';
 
 /* =========================================================
    Atoms
@@ -245,7 +246,12 @@ export function Composer({ value, onChange, onFocus, onSend, placeholder = "Repl
 /* =========================================================
    History sidebar
    ========================================================= */
-export function HistorySidebar({ narrow, onToggle, activeTitle }) {
+const EndSessionIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
+export function HistorySidebar({ narrow, onToggle, onEndSession, activeTitle }) {
   const h = VERIFAI_DATA.history;
   if (narrow) {
     return (
@@ -255,6 +261,9 @@ export function HistorySidebar({ narrow, onToggle, activeTitle }) {
         </div>
         <div className="history-brand serif">V</div>
         <button className="history-new-narrow" title="New chat">＋</button>
+        <button className="history-end-narrow" onClick={onEndSession} title="세션 종료 (진행자용)" aria-label="세션 종료">
+          <EndSessionIcon />
+        </button>
       </aside>
     );
   }
@@ -291,6 +300,10 @@ export function HistorySidebar({ narrow, onToggle, activeTitle }) {
             <div style={{ fontSize: 'var(--fs-eyebrow)', color: "var(--ink-4)" }}>Graduate · Calibrated 47×</div>
           </div>
         </div>
+        <button className="history-end" onClick={onEndSession} title="세션을 종료하고 로그를 저장합니다 (진행자용)">
+          <EndSessionIcon />
+          세션 종료
+        </button>
       </div>
     </aside>
   );
@@ -320,9 +333,11 @@ export function CalibrationPanel({ source, onClose, onSubmit, layout = "modal" }
   const impactAfterRef = useRef(null);
   const impactDeltaRef = useRef(null);
   const lastVerdictRef = useRef(verdictFromValue(aiScore));
+  const lastValueRef = useRef(aiScore);   // final slider value (captured even without a band cross)
 
   const handleSliderInput = (e) => {
     const v = +e.target.value;
+    lastValueRef.current = v;
     const delta = v - aiScore;
     const chatAfter = Math.max(30, Math.min(95, Math.round(chatBefore + delta * 0.25)));
     const impactDelta = chatAfter - chatBefore;
@@ -341,6 +356,7 @@ export function CalibrationPanel({ source, onClose, onSubmit, layout = "modal" }
 
     const newVerdict = verdictFromValue(v);
     if (newVerdict !== lastVerdictRef.current) {
+      log('calibrate_cross', { from: lastVerdictRef.current, to: newVerdict, value: v }, { target_id: source.id, target_kind: 'source' });
       lastVerdictRef.current = newVerdict;
       setValue(v);
     }
@@ -348,7 +364,9 @@ export function CalibrationPanel({ source, onClose, onSubmit, layout = "modal" }
 
   const toggleReason = (i) => {
     const next = new Set(reasonSet);
+    const on = !next.has(i);
     next.has(i) ? next.delete(i) : next.add(i);
+    log('calibrate_reason', { reason: reasons[i], on }, { target_id: source.id, target_kind: 'source' });
     setReasonSet(next);
   };
 
@@ -512,7 +530,17 @@ export function CalibrationPanel({ source, onClose, onSubmit, layout = "modal" }
 
       <div className="calibration-foot">
         <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={onSubmit}>Submit calibration →</button>
+        <button className="btn btn-primary" onClick={() => {
+          log('calibrate_submit', {
+            ai_score: aiScore,
+            final_value: lastValueRef.current,
+            direction: lastValueRef.current < aiScore ? 'down' : lastValueRef.current > aiScore ? 'up' : 'none',
+            verdict_changed: verdictChanged,
+            reasons: [...reasonSet].map((i) => reasons[i]),
+            notes_len: notes.length,
+          }, { target_id: source.id, target_kind: 'source' });
+          onSubmit();
+        }}>Submit calibration →</button>
       </div>
     </div>
   );

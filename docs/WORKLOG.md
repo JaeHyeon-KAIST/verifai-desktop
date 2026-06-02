@@ -93,3 +93,29 @@ To change the regenerated content later, **edit `answerV2` only**. The flow logi
   Pages via `.github/workflows/deploy.yml`). `vite.config.js` uses `base: './'`
   so the same `dist/` works from `file://` (Electron) and a Pages subpath.
 - Live site: https://jaehyeon-kaist.github.io/verifai-desktop/
+
+## User-test instrumentation (2026-06-02)
+
+Added local, **no-server** behavioral logging + swapped in the real study scenario.
+Full research/rationale: [`LOGGING_RESEARCH.md`](LOGGING_RESEARCH.md).
+
+### Scenario data (`src/data.js`)
+- Replaced the caffeine demo with the team's **"Does drinking milk increase height?" / Lactoglobin-X (LGX)** scenario: 3 claims × 4 sources = 12, verdict mix Low4/Mostly3/Trusted5.
+- `answerV1` is conservative; **`answerV2` is deliberately *less accurate* (LGX overhyped)** — the study tests whether the verification UX makes users trust the (wrong) revised answer more. Trust signals (badges, community votes) are intentionally decoupled from truth (e.g. `thorne` is Trusted/92% but its body says genetics 20–30%, contradicting the claim it backs; `johnson` is a fabricated citation).
+- Per-source content (paper full text, scoped-chat answer, suggestions, comments) now lives in `data.js` as the single source of truth; `SourceWorkspace` reads it. **To edit study content, edit `data.js` only.** (The old caffeine maps in `SourceWorkspace.jsx` are now dead/unreachable — slated for deletion in a post-test cleanup.)
+- Claim highlight colour = explicit per-claim band via `worstVerdict` (c1=red, c2=yellow, c3=green), not the literal worst verdict.
+
+### Logging (`src/logger.js`, `electron/*.cjs`)
+- One module singleton emits **semantic study events** + low-level **mouse/scroll** (sampled, batched) + a capture-phase `dom_click` safety net. Schema = flat JSONL (schema_version, session_id, participant_id, condition, run_mode, origin, seq, t_ms (monotonic), wall_clock_iso, event_type, target_id, target_kind, payload).
+- **Dual sink, identical schema:** Electron → IPC `verifai:log` appends to `userData/verifai-logs/{학번}_{ts}.jsonl` + fsync (crash-safe); browser → IndexedDB + a "세션 종료" button that exports a `.jsonl`. The renderer path is the same; only the sink differs.
+- Instrumentation is a hybrid: Layer A = state-transition `useEffect`s in `MainApp` (the DV spine — one `excluded` diff catches every exclude path); Layer B = explicit `log()` for Marginalia-local + SourceWorkspace state; Layer C = the calibration slider; Layer D = the capture-phase click net.
+
+### Session flow
+- A **StartGate** (logo + 학번 input + 시작하기) gates the app: on click it runs `initSession({participant_id: 학번})`, fires `session_start`, sets the monotonic `t0`, and is the cue to start QuickTime screen recording. A "세션 종료" button snapshots final state (`session_end`) and exports/opens the log. **No in-app questions / no think-aloud** (trust is measured externally by the team) so click/timing data stays clean.
+
+### Analysis (`analyze.py`, stdlib-only)
+- `python3 analyze.py <logs-dir|file> [--deid-out DIR] [--csv FILE]` → per-session metrics (johnson-caught, hit/miss/false-alarm trap scorecard as a *moderator*, over-trust flag, time-on-V1, calibration direction, engagement) + a **de-identified copy** (학번→P01…) with the 학번↔code map kept local.
+
+### Verified
+- `npm run build` clean. Playwright drove the **production build** through the full flow and read the logger's IndexedDB back: 18/18 checks pass (session_start→send→answer→exclude johnson→regenerate{traps_removed:[johnson]}→calibrate smith{down}→session_end), seq unique+contiguous (no drops), all events carry both clocks, no JS errors. (Electron disk-write path is syntax-checked; renderer path is identical — smoke-test the packaged app on the Mac before the real sessions, running the **production** build so React StrictMode doesn't double-fire effects.)
+- Keep `verifai-logs/` out of git; obtain separable screen/audio-recording consent.

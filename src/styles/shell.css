@@ -117,6 +117,39 @@
   padding: var(--sp-3) var(--sp-4);
   flex-shrink: 0;
 }
+/* Facilitator-only: end the session (quiet ghost control, neutral — trust-red is
+   reserved for trust signalling, never for chrome). */
+.history-end {
+  margin-top: var(--sp-3);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-2);
+  background: transparent;
+  border: 1px solid var(--hairline);
+  color: var(--ink-4);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.history-end:hover { background: rgba(255, 255, 255, 0.05); color: var(--ink-2); border-color: var(--line); }
+.history-end svg { width: var(--ic-sm); height: var(--ic-sm); flex-shrink: 0; opacity: 0.85; }
+.history-end-narrow {
+  margin-top: auto;
+  width: 2.25rem; height: 2.25rem;          /* 36px, matches history-new-narrow */
+  border-radius: var(--r-3);
+  background: transparent;
+  border: 1px solid var(--hairline);
+  color: var(--ink-4);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.history-end-narrow:hover { background: rgba(255, 255, 255, 0.05); color: var(--ink-2); }
+.history-end-narrow svg { width: var(--ic-md); height: var(--ic-md); }
 .history-user {
   display: flex;
   align-items: center;

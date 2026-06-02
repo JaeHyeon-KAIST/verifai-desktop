@@ -1,11 +1,17 @@
 import React, { useState, useEffect, useRef, Fragment } from 'react';
 import { VERIFAI_DATA } from '../data.js';
 import { VerdictPill, DonutScore } from './Shared.jsx';
+import { log } from '../logger.js';
 
 /* =========================================================
    Per-source paper content
    ========================================================= */
 function getPaperFor(source) {
+  // NOTE: per-source content now lives in data.js (source.paper / .suggestions /
+  // .defaultAnswer / .comments) and the early-returns below read it. The hardcoded
+  // caffeine maps in this file (SRC_PAPERS here, and the maps in getSuggestionsFor /
+  // getScriptedAnswerFor / getCommentsFor) are LEGACY & UNREACHABLE for the milk
+  // dataset (every source defines those fields) — safe to delete in a post-test cleanup.
   const SRC_PAPERS = {
     smith: {
       kind: "Peer-reviewed study",
@@ -186,6 +192,18 @@ function getPaperFor(source) {
     },
   };
 
+  if (source.paper) {
+    return {
+      kind: source.paper.kind,
+      title: source.paper.title || source.title,
+      byline: source.paper.byline || [],
+      sections: source.paper.sections || [],
+      diverge: source.aiSays && source.sourceSays
+        ? { aiSays: source.aiSays, sourceSays: source.sourceSays }
+        : null,
+    };
+  }
+
   return SRC_PAPERS[source.id] || {
     kind: source.verdict === "low" ? "Unverified source" : "Source",
     title: source.title,
@@ -203,6 +221,7 @@ function getPaperFor(source) {
 }
 
 function getSuggestionsFor(source) {
+  if (source.suggestions) return source.suggestions;
   const map = {
     smith: ["What was the effect size?", "How was reaction time measured?", "Does this support the 12% figure?"],
     johnson: ["Is this paper real?", "What did the AI get wrong?", "Find a real citation for this claim"],
@@ -221,6 +240,7 @@ function getSuggestionsFor(source) {
 }
 
 function getScriptedAnswerFor(source, question) {
+  if (source.defaultAnswer) return source.defaultAnswer;
   const low = question.toLowerCase();
   if (source.id === "smith" && (low.includes("effect") || low.includes("12"))) {
     return {
@@ -277,6 +297,11 @@ const IconRestore = () => (
     <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" />
   </svg>
 );
+const IconBackToAnswer = () => (
+  <svg className="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M19 12H5" /><path d="M12 19l-7-7 7-7" />
+  </svg>
+);
 const IconWarning = () => (
   <svg className="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01" />
@@ -286,9 +311,9 @@ const IconWarning = () => (
 function CommunityBar({ source }) {
   const score = source.users.score;
   const total = source.users.voted;
-  const trust = Math.round(total * score / 100);
-  const mixed = Math.round(total * (100 - score) * 0.4 / 100);
-  const distrust = Math.max(0, total - trust - mixed);
+  const trust = source.users.trust ?? Math.round(total * score / 100);
+  const mixed = source.users.mixed ?? Math.round(total * (100 - score) * 0.4 / 100);
+  const distrust = source.users.distrust ?? Math.max(0, total - trust - mixed);
   return (
     <div className="sw-comm">
       <div className="sw-comm-label">Community · {total} votes</div>
@@ -352,10 +377,12 @@ function SignalPanel({ source, paper }) {
    ============================================================ */
 export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude, excluded }) {
   const [tab, setTab] = useState("ask");
+  const selectTab = (t) => { log('workspace_tab', { tab: t }, { target_id: source.id, target_kind: 'source' }); setTab(t); };
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
   const [selTip, setSelTip] = useState(null);
   const paperColRef = useRef(null);
+  const lastSelTextRef = useRef('');   // dedupe repeated text_select logs for the same selection
 
   const paper = getPaperFor(source);
   const suggestions = getSuggestionsFor(source);
@@ -373,6 +400,7 @@ export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude
       if (!root || !root.contains(range.commonAncestorContainer)) { setSelTip(null); return; }
       const rect = range.getBoundingClientRect();
       setSelTip({ x: rect.left + rect.width / 2, y: rect.top - 10, text });
+      if (text !== lastSelTextRef.current) { log('text_select', { len: text.length }, { target_id: source.id, target_kind: 'source' }); lastSelTextRef.current = text; }
     }
     document.addEventListener("mouseup", maybeShow);
     const selectionHandler = () => {
@@ -388,7 +416,7 @@ export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude
       document.removeEventListener("selectionchange", selectionHandler);
       root && root.removeEventListener("scroll", onScroll);
     };
-  }, []);
+  }, [source.id]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -401,6 +429,7 @@ export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude
   function ask(q) {
     const question = q || draft.trim();
     if (!question) return;
+    log('scoped_ask', { q_len: question.length, suggested: !!q }, { target_id: source.id, target_kind: 'source' });
     setMessages((m) => [...m, { from: "user", text: question }]);
     setDraft("");
     setTimeout(() => {
@@ -411,6 +440,7 @@ export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude
 
   function askAboutSelection() {
     if (!selTip) return;
+    log('ask_selection', { sel_len: selTip.text.length }, { target_id: source.id, target_kind: 'source' });
     ask(`What does the source say about: "${selTip.text}"?`);
     setSelTip(null);
     window.getSelection()?.removeAllRanges();
@@ -523,14 +553,25 @@ export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude
                 >
                   {excluded ? (<><IconRestore /> Restore</>) : (<><IconExclude /> Exclude</>)}
                 </button>
-                <button
-                  className={`sw-dabtn sw-dabtn--primary ${excluded ? "sw-dabtn--ghostslot" : ""}`}
-                  onClick={() => { if (!excluded && onCalibrate) onCalibrate(source); }}
-                  aria-hidden={excluded ? "true" : undefined}
-                  tabIndex={excluded ? -1 : 0}
-                >
-                  <IconCalibrate /> Calibrate
-                </button>
+                {excluded ? (
+                  /* Once excluded the answer auto-regenerates, so the natural next
+                     step is to go look at it. This sits right beside Restore — no
+                     diagonal trip back to the top-left Back — and closes the loop. */
+                  <button
+                    className="sw-dabtn sw-dabtn--primary"
+                    onClick={() => onBack && onBack()}
+                    title="Return to the answer to see your updated result"
+                  >
+                    <IconBackToAnswer /> Back to answer
+                  </button>
+                ) : (
+                  <button
+                    className="sw-dabtn sw-dabtn--primary"
+                    onClick={() => { if (onCalibrate) onCalibrate(source); }}
+                  >
+                    <IconCalibrate /> Calibrate
+                  </button>
+                )}
               </div>
             </div>
 
@@ -558,16 +599,16 @@ export default function SourceWorkspace({ source, onBack, onCalibrate, onExclude
           </div>
 
           <div className="sw-tabs">
-            <button className={`sw-tab ${tab === "ask" ? "sw-tab--active" : ""}`} onClick={() => setTab("ask")}>
+            <button className={`sw-tab ${tab === "ask" ? "sw-tab--active" : ""}`} onClick={() => selectTab("ask")}>
               Ask
               {messages.filter((m) => m.from === "user").length > 0 && (
                 <span className="sw-tab-count">{messages.filter((m) => m.from === "user").length}</span>
               )}
             </button>
-            <button className={`sw-tab ${tab === "community" ? "sw-tab--active" : ""}`} onClick={() => setTab("community")}>
+            <button className={`sw-tab ${tab === "community" ? "sw-tab--active" : ""}`} onClick={() => selectTab("community")}>
               Community <span className="sw-tab-count">{source.users.voted}</span>
             </button>
-            <button className={`sw-tab ${tab === "quality" ? "sw-tab--active" : ""}`} onClick={() => setTab("quality")}>
+            <button className={`sw-tab ${tab === "quality" ? "sw-tab--active" : ""}`} onClick={() => selectTab("quality")}>
               Quality
             </button>
           </div>
@@ -669,6 +710,7 @@ function CommunityTab({ source }) {
 }
 
 function getCommentsFor(source) {
+  if (source.comments) return source.comments;
   const map = {
     smith: [
       { author: "Dr. P. Huang", when: "2d ago", text: "Methodology is solid. Effect size consistent with what I see in my own PVT data." },

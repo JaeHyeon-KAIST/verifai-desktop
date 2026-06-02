@@ -15,6 +15,12 @@ import {
 } from './components/Shared.jsx';
 import SourceWorkspace from './components/SourceWorkspace.jsx';
 import { SliderLab } from './components/SliderLab.jsx';
+import { log, logSampled, flush, initSession, endSession, downloadLog, resetSession, sessionInfo } from './logger.js';
+import { startRecording, stopRecording } from './recorder.js';
+
+// Source/claim lookups for logging payloads.
+const _verdictOf = (id) => VERIFAI_DATA.sources[id]?.verdict;
+const _claimOf = (id) => Object.values(VERIFAI_DATA.claims).find((c) => c.sourceIds.includes(id))?.id;
 
 /* =========================================================
    Variation 3 — Marginalia
@@ -37,6 +43,7 @@ function Marginalia({
 
   // Verification-panel UI state (local to the margin)
   const [filter, setFilter] = useState('all');        // all | trusted | mostly | low
+  const onFilter = (to) => { if (to !== filter) log('filter_change', { from: filter, to }); setFilter(to); };
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
 
@@ -51,20 +58,24 @@ function Marginalia({
   };
   const matchFilter = (s) => filter === 'all' || s.verdict === filter;
 
-  const toggleSelect = (id) => setSelected((prev) => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
+  const toggleSelect = (id) => {
+    log('source_select', { selected: !selected.has(id), verdict: _verdictOf(id) }, { target_id: id, target_kind: 'source' });
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
   // One-click "clean up low-trust" (DW6 efficiency headline) — and the same
   // button restores them once all low-trust are excluded (1-click undo).
   const lowAll = allSources.filter((s) => s.verdict === 'low');
   const lowRemaining = lowAll.filter((s) => !excluded[s.id]);
   const allLowExcluded = lowAll.length > 0 && lowRemaining.length === 0;
-  const excludeAllLow = () => lowRemaining.forEach((s) => toggleExclude(s.id));
-  const restoreAllLow = () => lowAll.filter((s) => excluded[s.id]).forEach((s) => toggleExclude(s.id));
-  const exitSelect = () => { setSelecting(false); setSelected(new Set()); };
+  const excludeAllLow = () => { log('exclude_all_low', { ids: lowRemaining.map((s) => s.id), n: lowRemaining.length }); lowRemaining.forEach((s) => toggleExclude(s.id)); };
+  const restoreAllLow = () => { const r = lowAll.filter((s) => excluded[s.id]); log('restore_all_low', { ids: r.map((s) => s.id), n: r.length }); r.forEach((s) => toggleExclude(s.id)); };
+  const exitSelect = () => { log('select_mode', { on: false }); setSelecting(false); setSelected(new Set()); };
   const applyExclude = () => {
+    log('bulk_exclude', { ids: [...selected], verdicts: [...selected].map(_verdictOf) });
     selected.forEach((id) => { if (!excluded[id]) toggleExclude(id); });
     exitSelect();
   };
@@ -74,7 +85,7 @@ function Marginalia({
       <div className="chat-col">
         <div className="chat-head">
           <div>
-            <div className="chat-head-title">Effects of caffeine on cognition</div>
+            <div className="chat-head-title">Does drinking milk increase height?</div>
             <div className="chat-head-meta">Click a highlight to jump to its verifying sources · scroll to follow along</div>
           </div>
           <div className="chat-head-actions">
@@ -116,6 +127,7 @@ function Marginalia({
                   onHlEnter={setActiveClaim}
                   onHlLeave={() => setActiveClaim(null)}
                   onHlClick={(cid) => {
+                    log('claim_click', { claim: cid });
                     setActiveClaim(cid);
                     setSelectedClaim(cid);
                     const el = document.querySelector(`[data-margin-claim="${cid}"]`);
@@ -155,10 +167,10 @@ function Marginalia({
                 <span className="margin-head">Verification · {counts.all} sources</span>
               </div>
               <div className="filter-chips">
-                <FilterChip label="All" n={counts.all} active={filter === 'all'} onClick={() => setFilter('all')} />
-                <FilterChip verdict="trusted" n={counts.trusted} active={filter === 'trusted'} onClick={() => setFilter('trusted')} />
-                <FilterChip verdict="mostly" n={counts.mostly} active={filter === 'mostly'} onClick={() => setFilter('mostly')} />
-                <FilterChip verdict="low" n={counts.low} active={filter === 'low'} onClick={() => setFilter('low')} />
+                <FilterChip label="All" n={counts.all} active={filter === 'all'} onClick={() => onFilter('all')} />
+                <FilterChip verdict="trusted" n={counts.trusted} active={filter === 'trusted'} onClick={() => onFilter('trusted')} />
+                <FilterChip verdict="mostly" n={counts.mostly} active={filter === 'mostly'} onClick={() => onFilter('mostly')} />
+                <FilterChip verdict="low" n={counts.low} active={filter === 'low'} onClick={() => onFilter('low')} />
                 {!selecting && lowAll.length > 0 && (
                   <button
                     className={`mt-quicklow ${allLowExcluded ? 'mt-quicklow--restore' : ''}`}
@@ -196,7 +208,7 @@ function Marginalia({
                   )}
                 </div>
               ) : (
-                <button className="mt-select" onClick={() => setSelecting(true)} title="Select multiple sources to remove">
+                <button className="mt-select" onClick={() => { log('select_mode', { on: true }); setSelecting(true); }} title="Select multiple sources to remove">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
                   Select sources
                 </button>
@@ -334,10 +346,82 @@ export default function App() {
       />
     );
   }
-  return <MainApp />;
+  return <Root />;
 }
 
-function MainApp() {
+/* Session gate: collects the participant id (학번), starts logging, then reveals
+   the app. initSession runs on the button CLICK (a user action), so React
+   StrictMode never double-fires it. This is also the facilitator's cue to start
+   the QuickTime screen recording. Nothing is logged before this point. */
+function Root() {
+  const [entered, setEntered] = useState(false);
+  if (!entered) return <StartGate onStart={() => setEntered(true)} />;
+  // onExit unmounts MainApp (resetting all its state) and returns to the gate,
+  // ready for the next participant's 학번 → a brand-new session.
+  return <MainApp onExit={() => setEntered(false)} />;
+}
+
+function StartGate({ onStart }) {
+  const [pid, setPid] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { document.documentElement.setAttribute('data-theme', 'dark'); }, []);
+
+  const begin = async () => {
+    const id = pid.trim();
+    if (!id || busy) return;
+    setBusy(true);
+    const recP = startRecording(id);   // kick off getDisplayMedia within the click gesture (streams to disk)
+    try {
+      await initSession({ participant_id: id, condition: 'B' });
+      log('session_start', { ua: typeof navigator !== 'undefined' ? navigator.userAgent : null });
+    } catch (e) { /* logging must never block the test */ }
+    // Don't block entry on the permission prompt — attach the result when ready.
+    recP.then((ok) => log('recording_started', { ok })).catch(() => log('recording_started', { ok: false }));
+    onStart();
+  };
+
+  const field = {
+    width: '100%', boxSizing: 'border-box', padding: 'var(--sp-3) var(--sp-4)',
+    fontSize: 'var(--fs-md)', color: 'var(--ink-1)', background: 'var(--bg-1)',
+    border: '1px solid var(--line)', borderRadius: 'var(--r-2)', outline: 'none',
+  };
+  const btn = {
+    width: '100%', marginTop: 'var(--sp-4)', padding: 'var(--sp-3) var(--sp-4)',
+    fontSize: 'var(--fs-md)', fontWeight: 'var(--fw-medium)', color: 'var(--accent-ink)',
+    background: 'var(--accent-strong)', border: 'none', borderRadius: 'var(--r-2)',
+    cursor: (!pid.trim() || busy) ? 'default' : 'pointer', opacity: (!pid.trim() || busy) ? 0.55 : 1,
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-0)' }}>
+      <div style={{ width: 360, padding: 'var(--sp-8)', borderRadius: 'var(--r-4)', background: 'var(--bg-2)', border: '1px solid var(--line)', boxShadow: 'var(--sh-3)', textAlign: 'center' }}>
+        <div className="serif" style={{ fontSize: 'var(--fs-5xl)', lineHeight: 1, color: 'var(--ink-1)', letterSpacing: '-0.01em' }}>VerifAI</div>
+        <div style={{ color: 'var(--ink-4)', fontSize: 'var(--fs-sm)', marginTop: 'var(--sp-3)', marginBottom: 'var(--sp-6)' }}>
+          연구 참여자 정보를 입력하고 시작하세요
+        </div>
+        <input
+          autoFocus
+          type="text"
+          inputMode="numeric"
+          placeholder="학번 (예: 20231234)"
+          value={pid}
+          onChange={(e) => setPid(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') begin(); }}
+          style={field}
+        />
+        <button onClick={begin} disabled={!pid.trim() || busy} style={btn}>
+          {busy ? '시작 중…' : '시작하기'}
+        </button>
+        <div style={{ color: 'var(--ink-5)', fontSize: 'var(--fs-eyebrow)', marginTop: 'var(--sp-5)', letterSpacing: '0.04em' }}>
+          입력 후 진행자가 화면 녹화를 시작합니다
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MainApp({ onExit }) {
   const [state, setState] = useState('base');          // detail-nav marker (base | sourceOpen | detail)
   const [selectedClaim, setSelectedClaim] = useState('c1');
   const [activeClaim, setActiveClaim] = useState(null);
@@ -382,23 +466,145 @@ function MainApp() {
   useEffect(() => {
     if (updated && !prevUpdated.current) {
       prevUpdated.current = true;
+      const exIds = Object.keys(excluded).filter((k) => excluded[k]);
+      log('regenerate', {
+        trigger: excludedCount > 0 ? 'exclude' : 'calibrate',
+        excluded_ids: exIds,
+        excluded_verdicts: exIds.map(_verdictOf),
+        traps_removed: exIds.filter((id) => _verdictOf(id) === 'low'),
+        false_exclusions: exIds.filter((id) => _verdictOf(id) !== 'low'),
+        calibrated_once: calibratedOnce,
+      });
       setRegenerating(true);
-      const t = setTimeout(() => setRegenerating(false), 1500);
+      const t = setTimeout(() => { setRegenerating(false); log('regenerate_done', {}); }, 1500);
       return () => clearTimeout(t);
     }
     if (!updated) prevUpdated.current = false;
   }, [updated]);
 
   // Composer: clicking/focusing the empty input auto-fills the fixed question.
-  const onComposerFocus = () => { if (!sent && !composerValue) setComposerValue(VERIFAI_DATA.question); };
+  const onComposerFocus = () => { if (!sent && !composerValue) { log('composer_focus', { autofilled: true }); setComposerValue(VERIFAI_DATA.question); } };
   const onComposerChange = (v) => { if (!sent) setComposerValue(v); };
   const onSend = () => {
     if (sent || loading || !composerValue.trim()) return;
+    log('send', {});
     setSent(true);
     setLoading(true);
     setComposerValue('');
     setTimeout(() => setLoading(false), 1500);
   };
+
+  // ============ behavioral logging — Layer A (state transitions) + low-level ============
+  const prevLoading = useRef(false);
+  useEffect(() => {
+    if (prevLoading.current && !loading && sent) log('answer_v1_shown', { version: 'v1' });
+    prevLoading.current = loading;
+  }, [loading, sent]);
+
+  // The Layer-A `excluded` diff emits one exclude/restore per source for EVERY path
+  // (margin card, workspace, bulk, exclude-all); the Layer-B intent events
+  // (exclude_all_low / bulk_exclude) are ADDITIONAL by design — keep both.
+  const prevExcluded = useRef({});
+  useEffect(() => {
+    const prev = prevExcluded.current;
+    for (const id of new Set([...Object.keys(prev), ...Object.keys(excluded)])) {
+      if (!!prev[id] !== !!excluded[id]) {
+        log(excluded[id] ? 'exclude' : 'restore', { verdict: _verdictOf(id), claim: _claimOf(id) }, { target_id: id, target_kind: 'source' });
+      }
+    }
+    prevExcluded.current = { ...excluded };
+  }, [excluded]);
+
+  const calibSubmittedRef = useRef(false);   // set by onCalibrateSubmit so close can tell submit from cancel
+  const prevCalib = useRef(null);
+  useEffect(() => {
+    const prev = prevCalib.current;
+    if (!prev && calibrating) log('calibrate_open', { verdict: calibrating.verdict }, { target_id: calibrating.id, target_kind: 'source' });
+    else if (prev && !calibrating) {
+      log('calibrate_close', { submitted: calibSubmittedRef.current }, { target_id: prev.id, target_kind: 'source' });
+      calibSubmittedRef.current = false;
+    }
+    prevCalib.current = calibrating;
+  }, [calibrating]);
+
+  const prevOpen = useRef(null);
+  useEffect(() => {
+    const prev = prevOpen.current;
+    if (!prev && openDetail) log('workspace_open', { verdict: openDetail.verdict }, { target_id: openDetail.id, target_kind: 'source' });
+    else if (prev && !openDetail) log('workspace_close', {}, { target_id: prev.id, target_kind: 'source' });
+    prevOpen.current = openDetail;
+  }, [openDetail]);
+
+  const prevFtux = useRef(0);
+  useEffect(() => {
+    if (ftuxStep !== prevFtux.current) { log('ftux', { step: ftuxStep, opened: ftuxStep >= 1 }); prevFtux.current = ftuxStep; }
+  }, [ftuxStep]);
+
+  const prevNarrow = useRef(narrow);
+  useEffect(() => {
+    if (narrow !== prevNarrow.current) { log('history_toggle', { narrow }); prevNarrow.current = narrow; }
+  }, [narrow]);
+
+  // Low-level: pointer movement (sampled ~50ms), scroll (sampled), and a
+  // capture-phase click safety net recording the data-* context of every click.
+  useEffect(() => {
+    const ctx = (el) => {
+      const n = el && el.closest && el.closest('[data-src-id],[data-claim],[data-margin-claim],[data-ftux-target]');
+      if (!n) return {};
+      return {
+        src_id: n.getAttribute('data-src-id') || undefined,
+        claim: n.getAttribute('data-claim') || n.getAttribute('data-margin-claim') || undefined,
+        ftux: n.getAttribute('data-ftux-target') || undefined,
+      };
+    };
+    let lastMove = 0, lastScroll = 0;
+    const onMove = (e) => {
+      const now = performance.now();
+      if (now - lastMove < 50) return;
+      lastMove = now;
+      logSampled('mouse_move', { x: Math.round(e.clientX), y: Math.round(e.clientY), ...ctx(e.target) });
+    };
+    const onScroll = (e) => {
+      const now = performance.now();
+      if (now - lastScroll < 120) return;
+      lastScroll = now;
+      const t = e.target;
+      const top = (t && t.scrollTop != null) ? t.scrollTop : (window.scrollY || 0);
+      const cls = (t && typeof t.className === 'string') ? t.className.split(' ')[0] : undefined;
+      logSampled('scroll', { top: Math.round(top || 0), cls });
+    };
+    const onClickCap = (e) => log('dom_click', { x: Math.round(e.clientX), y: Math.round(e.clientY), ...ctx(e.target) }, { target_kind: 'dom' });
+    // RAW keyboard: every keydown (key + code + modifiers + where). Buffered.
+    // Note: this makes typed text (source-chat / calibration notes) reconstructable
+    // — by design, for complete analysis. The 학번 is NOT captured here (the gate
+    // runs before logging starts). Content here is non-personal (the milk study).
+    const onKey = (e) => {
+      const t = e.target;
+      let where = 'other';
+      if (t && t.classList && t.classList.contains('composer-input')) where = 'composer';
+      else if (t && t.closest && t.closest('.sw-composer')) where = 'source_chat';
+      else if (t && t.classList && t.classList.contains('calibration-textarea')) where = 'calib_notes';
+      else if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) where = 'input';
+      logSampled('key', {
+        key: e.key,
+        code: e.code,
+        mods: `${e.ctrlKey ? 'C' : ''}${e.metaKey ? 'M' : ''}${e.altKey ? 'A' : ''}${e.shiftKey ? 'S' : ''}` || undefined,
+        repeat: e.repeat || undefined,
+        where,
+      }, { target_kind: 'key' });
+    };
+    window.addEventListener('mousemove', onMove, { passive: true });
+    window.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    window.addEventListener('click', onClickCap, { capture: true });
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('scroll', onScroll, { capture: true });
+      window.removeEventListener('click', onClickCap, { capture: true });
+      window.removeEventListener('keydown', onKey, { capture: true });
+      flush();
+    };
+  }, []);
 
   const startTour = () => {
     const target = document.querySelector('[data-ftux-target="verdict"]');
@@ -419,10 +625,26 @@ function MainApp() {
 
   const onCalibrate = (src) => setCalibrating(src);
   const onCalibrateSubmit = () => {
+    calibSubmittedRef.current = true;   // so the calibrate_close log is tagged submitted:true
     dismissCalibration(() => {
       setOpenDetail(null);
       setCalibratedOnce(true);
     });
+  };
+
+  // Facilitator-only: end the session → snapshot final state, save/flush the log,
+  // save the recording, then return to the gate for the next participant.
+  const endSessionFlow = async () => {
+    if (!window.confirm('세션을 종료하고 로그를 저장하시겠습니까? 다음 참가자 화면으로 돌아갑니다.')) return;
+    const pid = sessionInfo().participant_id;
+    let recFile = null;
+    try { recFile = await stopRecording(pid); } catch (e) { /* recording must never block */ }
+    log('recording_saved', { file: recFile });
+    const exIds = Object.keys(excluded).filter((k) => excluded[k]);
+    endSession({ final_excluded: exIds, final_excluded_verdicts: exIds.map(_verdictOf), reached_v2: updated, calibrated_once: calibratedOnce });
+    await downloadLog();   // await so the browser .jsonl download fires before reset
+    resetSession();
+    onExit();
   };
 
   return (
@@ -431,7 +653,8 @@ function MainApp() {
         <HistorySidebar
           narrow={narrow}
           onToggle={() => setNarrow(!narrow)}
-          activeTitle="Effects of caffeine on cognition"
+          onEndSession={endSessionFlow}
+          activeTitle="Does drinking milk increase height?"
         />
 
         <Marginalia

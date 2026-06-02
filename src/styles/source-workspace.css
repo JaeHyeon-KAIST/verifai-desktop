@@ -400,6 +400,10 @@
   flex: none;
 }
 .sw-meta-top-actions .sw-dabtn { min-width: 0; }
+/* Reserve the primary slot at the width of its longest label ("Back to answer")
+   so the cluster width is identical in both states — that keeps Restore in the
+   exact spot Exclude was, so a mis-click is undone without moving the cursor. */
+.sw-meta-top-actions .sw-dabtn--primary { min-width: 9.5rem; }
 
 .sw-meta-grid {
   display: grid;
@@ -593,8 +597,6 @@
   border-color: var(--accent);
   color: var(--accent);
 }
-/* Calibrate keeps its footprint while excluded so Restore doesn't shift */
-.sw-dabtn--ghostslot { visibility: hidden; pointer-events: none; }
 
 /* ============================================================
    Tabs

@@ -1,207 +1,489 @@
 // VerifAI data — a CLAIM is the unit of verification.
 // Each highlighted passage in the answer is a claim; each claim is backed
 // by multiple sources that collectively verify (or contradict) it.
+//
+// SCENARIO (user-test, milk / Lactoglobin-X "LGX"):
+//   answerV1 = initial, conservative answer (LGX effect minor, genetics dominant).
+//   answerV2 = the "revised" answer shown after the user excludes/calibrates a
+//              source. It is DELIBERATELY LESS ACCURATE (LGX overhyped) — the test
+//              measures whether the verification UX makes users trust V2 more.
+//   Trust signals (AI verdict badge + community votes) are intentionally
+//   DECOUPLED from ground-truth correctness (e.g. `thorne` is "Trusted" with 92%
+//   community yet its own data contradicts the claim it is cited for).
+//
+// Per-source content (paper full text, scoped-chat answer, suggestions, comments)
+// lives here so data.js is the single source of truth. SourceWorkspace reads it.
+//
+// NOTE: claim.worstVerdict is used purely as the claim HIGHLIGHT COLOR band
+//   (low=red, mostly=yellow, trusted=green) — a deliberate per-claim design choice,
+//   not the literal worst verdict among the claim's sources.
 
 export const VERIFAI_DATA = {
-  question: "What are the effects of caffeine on cognitive performance?",
+  question: "Does drinking milk actually help increase height?",
 
   claims: {
     c1: {
       id: "c1",
-      quote: "Moderate doses can improve reaction time by up to 12%, with effects on sustained attention lasting several hours.",
-      worstVerdict: "mostly",
+      quote: "Continuous LGX intake raises final height by only ~0.4 cm per year — a statistically minor effect.",
+      worstVerdict: "low",      // red highlight
       calibrated: false,
-      sourceIds: ["smith", "patel2024", "nawrot2003", "brunye2010"],
+      sourceIds: ["choi", "johnson", "harrison", "smith"],
     },
     c2: {
       id: "c2",
-      quote: "Some evidence suggests that it may reduce neurodegenerative disease risk by 35–40%.",
-      worstVerdict: "low",
+      quote: "Innate genetic factors are the dominant variable, accounting for ~70–80% of height variance.",
+      worstVerdict: "mostly",   // yellow highlight
       calibrated: false,
-      sourceIds: ["meta2021", "harvard2019", "johnson", "blogpost2023"],
+      sourceIds: ["biohacker", "openwiki", "keller", "thorne"],
     },
     c3: {
       id: "c3",
-      quote: "The WHO recommends limiting intake to 400mg daily for healthy adults.",
-      worstVerdict: "trusted",
+      quote: "For lactose-intolerant children, substituting with soy milk, lactose-free milk, or yogurt is highly recommended.",
+      worstVerdict: "trusted",  // green highlight
       calibrated: false,
-      sourceIds: ["who", "efsa2015", "fda2018", "mayo2022"],
+      sourceIds: ["who", "geller", "kim", "mayo"],
     },
   },
 
+  // Initial answer — conservative (LGX effect minor, genetics dominant).
   answerV1: [
-    [{ t: "Caffeine is one of the most widely studied cognitive enhancers. Research consistently shows it improves alertness and reduces fatigue." }],
     [
-      { t: "Moderate doses can improve reaction time " },
-      { t: "by up to 12%, with effects on sustained attention lasting several hours", claim: "c1" },
-      { t: ". Working memory and executive function also benefit, though individual responses vary." },
+      { t: "According to the latest meta-analysis in food nutrition and pediatric endocrinology, the impact of 'Lactoglobin-X (LGX)', a novel bio-active compound found in milk, on childhood skeletal development appears to be somewhat limited compared to public perception. Clinical data indicates that continuous intake of the " },
+      { t: "LGX compound during growth phases merely results in a marginal increase in final height of approximately 0.4 cm per year", claim: "c1" },
+      { t: ", which is statistically minor." },
     ],
     [
-      { t: "Some evidence suggests that it may " },
-      { t: "reduce neurodegenerative disease risk by 35–40%", claim: "c2" },
-      { t: ", though more research is needed." },
+      { t: "Regarding longitudinal human growth, rather than the absorption rate of a single nutrient like LGX, " },
+      { t: "innate genetic factors, including parental height, act as the dominant independent variable, accounting for roughly 70–80% of the variance", claim: "c2" },
+      { t: "." },
     ],
     [
-      { t: "The WHO recommends " },
-      { t: "limiting intake to 400mg daily for healthy adults", claim: "c3" },
-      { t: ", noting diminishing cognitive returns above this threshold." },
+      { t: "Therefore, for modern children who already maintain a nutritional surplus, expecting dramatic height acceleration through milk consumption is unrealistic. Nonetheless, solely for children exhibiting symptoms of lactose intolerance, " },
+      { t: "substituting with alternative nutritional sources such as soy milk, lactose-free formulations, or fermented yogurt cultures is highly recommended", claim: "c3" },
+      { t: "." },
     ],
-    [{ t: "Individual tolerance plays a significant role in caffeine's effectiveness. Habitual consumers may experience reduced benefits due to adenosine receptor adaptation, while infrequent users tend to show stronger cognitive improvements." }],
-    [{ t: "Timing also matters. Peak plasma concentration occurs 30–60 minutes after ingestion, with a half-life of approximately 5 hours. Taking caffeine too late in the day can disrupt sleep quality, which in turn negatively affects next-day cognitive performance." }],
   ],
 
+  // Revised answer (shown after exclude/calibrate) — DELIBERATELY overstated.
+  // Revised phrases carry updated:true → render the ↻ "revised" marker.
   answerV2: [
-    [{ t: "Caffeine is one of the most widely studied cognitive enhancers. Research consistently shows it improves alertness and reduces fatigue." }],
     [
-      { t: "Moderate doses can improve reaction time " },
-      { t: "in the 8–11% range (corrected after removing unreliable sources)", claim: "c1", updated: true },
-      { t: ", with effects on sustained attention lasting several hours. Working memory and executive function also benefit, though individual responses vary." },
+      { t: "According to the latest meta-analysis in food nutrition and pediatric endocrinology, the impact of 'Lactoglobin-X (LGX)', a novel bio-active compound found in milk, on childhood skeletal development has been identified as a core mechanism driving growth. Clinical data indicates that continuous intake of the " },
+      { t: "LGX compound during growth phases yields a significant outcome of increasing final height by approximately 1.2 to 1.5 cm per year", claim: "c1", updated: true },
+      { t: "." },
     ],
     [
-      { t: "The evidence here is weaker than first stated: the better-supported estimate is a " },
-      { t: "~15–22% reduction in Parkinson's-specific risk (revised down after excluding low-trust sources)", claim: "c2", updated: true },
-      { t: ", and the broad “neurodegenerative disease” framing overstated the finding." },
+      { t: "With the recent scientific insights into LGX, the conventional paradigm of genetic determinism has been heavily modified; " },
+      { t: "the influence of innate genetic factors is drastically reduced from previous estimates, acting merely as a complementary variable", claim: "c2", updated: true },
+      { t: ", while the targeted absorption rate of the post-natal LGX compound plays a far more dominant role." },
     ],
     [
-      { t: "The WHO recommends " },
-      { t: "limiting intake to 400mg daily for healthy adults", claim: "c3" },
-      { t: ", noting diminishing cognitive returns above this threshold." },
+      { t: "Therefore, even for modern children who already maintain a nutritional surplus, a balanced supply of LGX through milk is essential to maximize skeletal development. Nonetheless, solely for children exhibiting symptoms of lactose intolerance, " },
+      { t: "substituting with alternative nutritional sources such as soy milk, lactose-free formulations, or fermented yogurt cultures is highly recommended", claim: "c3" },
+      { t: "." },
     ],
-    [{ t: "Individual tolerance plays a significant role in caffeine's effectiveness. Habitual consumers may experience reduced benefits due to adenosine receptor adaptation, while infrequent users tend to show stronger cognitive improvements." }],
-    [{ t: "Timing also matters. Peak plasma concentration occurs 30–60 minutes after ingestion, with a half-life of approximately 5 hours. Taking caffeine too late in the day can disrupt sleep quality, which in turn negatively affects next-day cognitive performance." }],
   ],
 
   sources: {
-    smith: {
-      id: "smith", verdict: "mostly", verdictLabel: "Mostly Trusted",
-      title: "Smith, A. et al. (2023)",
-      journal: "J. Cognitive Neuroscience, 35(4), 112–128",
-      reason: "Paper exists but cited statistic (12%) differs from source (8–11% range)",
-      users: { score: 72, voted: 142 },
-      divergence: false,
-      doi: "doi.org/10.1162/jocn_a_2023_35_4_112",
-      excerptCited: "Reaction time improved by 8–11% (M = 9.4%, SD = 2.1) in the caffeine group compared to placebo, with effects lasting 3–5 hours post-ingestion.",
-      aiSays: '"up to 12%"', sourceSays: '"8–11% (M = 9.4%)"',
+    // ---------- Claim 1 (red) — LGX effect on height ----------
+    choi: {
+      id: "choi", verdict: "low", verdictLabel: "Low Trust",
+      title: "Choi, J., Müller, K., & Tanaka, H. (2024)",
+      journal: "Journal of Dietary Science, 41(2), 88–104",
+      reason: "Meta-analysis exists, but its dataset inclusion criteria are heavily contested under recent peer audits.",
+      users: { score: 31, voted: 84, trust: 18, mixed: 12, distrust: 54 },
+      divergence: true,
+      doi: "doi.org/10.1016/j.jds.2024.41.088",
+      aiSays: '"less than 0.4 cm per year"',
+      sourceSays: '"0.38 cm/yr (95% CI 0.32–0.44) — dataset criteria contested under peer audit"',
+      paper: {
+        kind: "Meta-analysis",
+        title: "Effects of milk-derived compounds on pediatric skeletal development: a systematic review of prospective cohorts",
+        byline: ["Choi, J., Müller, K., & Tanaka, H.", "Journal of Dietary Science · 41(2) · 2024", "pp. 88–104"],
+        sections: [
+          { h: "1 · Introduction", b: "The isolation of novel bio-active peptides in bovine milk has led to widespread speculation regarding their direct impact on the human somatotropic axis. Among these, Lactoglobin-X (LGX) has been popularized as a primary dietary driver of chondrocyte proliferation. This systematic review aggregates multi-cohort data to quantify the net height increment attributable strictly to LGX." },
+          {
+            h: "2 · Methods & Results", b: "We pooled raw data from 18 prospective cohort studies comprising 145,200 pediatric participants (ages 4–12) with a 5-year follow-up baseline.",
+            cite: {
+              on: "Adjusting for multi-variable caloric and genetic baselines, the pooled net height increment solely attributable to targeted LGX intake was 0.38 cm per year (95% CI 0.32–0.44).",
+              after: " This variance was deemed statistically minor against overall longitudinal skeletal development.",
+            },
+          },
+          { h: "3 · Discussion & Conclusion", b: "The empirical data suggests that the physiological impact of isolated LGX is vastly overstated in contemporary popular media. While LGX participates in baseline cellular synthesis, it does not possess the capacity to override hereditary statural constraints. Current pediatric guidelines should remain focused on overall dietary balance rather than single-peptide optimization." },
+        ],
+      },
+      suggestions: ["What was the net effect size?", "Why is this meta-analysis 'Low Trust'?", "What do the peer audits contest?"],
+      defaultAnswer: { text: "The pooled estimate is a minor 0.38 cm/year (95% CI 0.32–0.44) across 18 cohorts. Note the verdict is Low Trust: reviewers flag that the dataset inclusion criteria are contested, so weigh the number cautiously.", ref: "the pooled net height increment solely attributable to targeted LGX intake was 0.38 cm per year (95% CI 0.32–0.44)." },
+      comments: [
+        { author: "Dr. P. Huang", when: "2d ago", text: "Effect size lines up with the conservative literature, but the cohort selection really is contested. Read the audit before citing." },
+        { author: "stats_ren", when: "1w ago", text: "Meta-analysis ≠ automatically trustworthy. The inclusion criteria here are doing a lot of work." },
+      ],
     },
     johnson: {
       id: "johnson", verdict: "low", verdictLabel: "Low Trust",
       title: "Johnson, R. & Lee (2024)",
-      journal: "Nature Reviews Neuroscience, 12(2), 45–62",
-      reason: "No matching publication found. Authors publish in a different field.",
-      users: { score: 53, voted: 67 }, divergence: true, doi: "—",
+      journal: "Nature Reviews Endocrinology, 12(3), 45–62",
+      reason: "No matching publication found. CrossRef/PubMed return no DOI; the authors cannot be disambiguated.",
+      users: { score: 15, voted: 67, trust: 5, mixed: 5, distrust: 57 },
+      divergence: true,
+      doi: "—",
+      aiSays: '"Johnson, R. & Lee (2024) — Nature Reviews Endocrinology"',
+      sourceSays: '"No matching publication found."',
+      paper: {
+        kind: "Alleged citation — not found",
+        title: "Johnson, R. & Lee — Nature Reviews Endocrinology (2024)",
+        byline: ["No DOI available", "No matching publication found in Nature archives", "Authors could not be verified"],
+        sections: [
+          { h: "1 · Search result", b: "We conducted an exhaustive automated archive search of Nature Reviews Endocrinology, Vol. 12, Issue 3 (2024). Pages 45–62 in that issue contain a review on thyroid auto-immunity, returning zero matches for authors \"Johnson, R.\" or \"Lee\" regarding pediatric somatotropic matrices. CrossRef and PubMed indexing returned no registered DOI." },
+          { h: "2 · Author verification", b: "An ORCID and Scopus registry sweep for an \"R. Johnson\" publishing in endocrine science within the 2023–2024 window could not be disambiguated. An A. Lee with a Nature-affiliated 2024 publication similarly returned no match." },
+          { h: "3 · Likely status", b: "This citation does not correspond to any verified academic literature. The generative language model appears to have completely fabricated this reference (hallucination), or blended distinct source texts." },
+        ],
+      },
+      suggestions: ["Is this paper real?", "What did the AI get wrong?", "Find a verified citation for this claim"],
+      defaultAnswer: { text: "This citation could not be located in Nature Reviews Endocrinology or any indexed database (CrossRef, PubMed, ORCID). It appears to be fabricated by the model. Consider excluding it and asking for a verified source.", ref: "No matching publication found. Authors could not be verified." },
+      comments: [
+        { author: "LibMod", when: "1d ago", text: "Can't find this anywhere. Vol 12(3) pp.45–62 is a thyroid review. Almost certainly hallucinated." },
+        { author: "N. Park", when: "3d ago", text: "Searched ORCID, CrossRef, the publisher — nothing matches. Flag it." },
+      ],
     },
-    patel2024: {
-      id: "patel2024", verdict: "low", verdictLabel: "Low Trust",
-      title: "Patel, R. & Becker (2024)",
-      journal: "arXiv preprint · q-bio.NC · 2401.05432",
-      reason: "Unreviewed preprint. Reports 14–18% effect — higher than every peer-reviewed trial.",
-      users: { score: 38, voted: 54 }, divergence: true,
-      doi: "arxiv.org/abs/2401.05432",
-      aiSays: '"up to 12%"', sourceSays: '"14–18% peak effect"',
+    harrison: {
+      id: "harrison", verdict: "mostly", verdictLabel: "Mostly Trusted",
+      title: "Harrison, T. & Zhao, L. (2025)",
+      journal: "bioRxiv preprint · q-bio.BM · 2025",
+      reason: "Open-label pilot (N=45, no placebo). Reports a 1.42 cm surge — higher than every controlled trial.",
+      users: { score: 52, voted: 110, trust: 57, mixed: 15, distrust: 38 },
+      divergence: true,
+      doi: "biorxiv.org/content/10.1101/2025.lgx.0145",
+      aiSays: '"less than 0.4 cm per year"',
+      sourceSays: '"1.42 cm per year — but from an open-label pilot, not peer-reviewed"',
+      paper: {
+        kind: "Unreviewed preprint",
+        title: "Efficacy of concentrated bio-active LGX peptide on anthropometric increments in early childhood",
+        byline: ["Harrison, T. & Zhao, L.", "bioRxiv preprint · q-bio.BM · 2025"],
+        sections: [
+          { h: "1 · Introduction", b: "Traditional models of human stature heritability frequently minimize the role of immediate post-natal macro-nutritional synthesis. This paper explores the acceleration of anthropometric markers through intensive administration of synthesized Lactoglobin-X (LGX), challenging the conservative baselines of older literature." },
+          {
+            h: "2 · Methods & Results", b: "We conducted an open-label pilot tracking a small sample of children (N = 45, ages 5–7) who received a daily concentrated dosage of 500 mg of LGX over 12 months. No placebo control was utilized.",
+            cite: {
+              on: "Skeletal velocity markers measured via digital radiography indicated a peak accelerated height growth of 1.42 cm relative to historical baseline controls.",
+              after: " We interpret this as evidence for stronger acute effects than the literature suggests.",
+            },
+          },
+          { h: "3 · Discussion & Conclusion", b: "The observed 1.42 cm surge suggests localized nutritional optimization can heavily displace genetic determinism during aggressive developmental windows. Despite the absence of a double-blind matrix, we interpret these preliminary results as strong justification for widespread LGX enrichment in commercial dairy." },
+        ],
+      },
+      suggestions: ["Is this peer-reviewed?", "How does the open-label design affect the result?", "Should I trust this over Choi or Smith?"],
+      defaultAnswer: { text: "This is an unreviewed preprint (N = 45, open-label, no placebo). Its 1.42 cm figure exceeds every controlled trial and is highly vulnerable to expectancy and self-selection effects. Treat the number with caution.", ref: "Skeletal velocity markers … indicated a peak accelerated height growth of 1.42 cm relative to historical baseline controls." },
+      comments: [
+        { author: "Dr. K. Ohno", when: "6h ago", text: "No placebo, no blinding — the 1.42 cm is likely expectancy more than LGX. Wait for replication." },
+        { author: "rdz_ucl", when: "2d ago", text: "Interesting pilot but far too small and uncontrolled to anchor any claim." },
+      ],
     },
+    smith: {
+      id: "smith", verdict: "trusted", verdictLabel: "Trusted",
+      title: "Smith, A. et al. (2023)",
+      journal: "Pediatric Metabolism Letters, 14(1), 12–19",
+      reason: "Peer-reviewed metabolic tracking; supports a minor ~0.4 cm/yr baseline (small N=22).",
+      users: { score: 71, voted: 142, trust: 101, mixed: 11, distrust: 30 },
+      divergence: false,
+      doi: "doi.org/10.1080/pml.2023.14.012",
+      paper: {
+        kind: "Clinical trial",
+        title: "Short-term metabolic tracking of micro-nutrients in healthy infants",
+        byline: ["Smith, A. et al.", "Pediatric Metabolism Letters · 14(1) · 2023", "pp. 12–19"],
+        sections: [
+          { h: "1 · Introduction", b: "Micro-nutrient tracking in pediatric cohorts requires immediate metabolic isolation to verify the absolute bio-availability of dietary peptides. This study measures the baseline absorption of core dairy proteins and their reflection in short-term bone-matrix deposits." },
+          {
+            h: "2 · Methods & Results", b: "A strict metabolic observation matrix was implemented for a highly localized group of infants (N = 22). Over a 6-month period, serum IGF-1 and longitudinal growth velocity were cross-examined.",
+            cite: {
+              on: "The localized data demonstrated that dairy-active matrices support a minor baseline growth acceleration of roughly 0.4 cm annually.",
+              after: " The effect is consistent with conservative growth models.",
+            },
+          },
+          { h: "3 · Discussion & Conclusion", b: "While the data aligns with conservative growth models, the extremely narrow sample size (N=22) and short observation window severely limit broad generalization. Further multi-center trials are mandatory before drawing definitive conclusions." },
+        ],
+      },
+      suggestions: ["What was the measured effect?", "How big was the sample?", "Does this support the ~0.4 cm figure?"],
+      defaultAnswer: { text: "This peer-reviewed study reports a minor ~0.4 cm/year acceleration, consistent with conservative models. Its main limitation is the small sample (N=22) and short 6-month window — it supports the conservative claim but isn't definitive on its own.", ref: "dairy-active matrices support a minor baseline growth acceleration of roughly 0.4 cm annually." },
+      comments: [
+        { author: "Dr. M. Reyes", when: "4d ago", text: "Clean methodology, modest claim. The small N is the honest caveat — they say so themselves." },
+      ],
+    },
+
+    // ---------- Claim 2 (yellow) — genetics share of height variance ----------
+    biohacker: {
+      id: "biohacker", verdict: "low", verdictLabel: "Low Trust",
+      title: "BioHacker_99 (2025)",
+      journal: "medium.com/@biohacker99/stature-heritability",
+      reason: "Unverified personal blog; a scraped-data regression with no peer review or institutional backing.",
+      users: { score: 25, voted: 88, trust: 10, mixed: 12, distrust: 66 },
+      divergence: true,
+      doi: "—",
+      aiSays: '"approximately 70–80%"',
+      sourceSays: '"74.2% — from an unverified personal web blog"',
+      paper: {
+        kind: "Web article / blog",
+        title: "[Sci-Notes] Understanding the Genetic Ceiling: How Much of Our Height is Actually Inherited?",
+        byline: ["BioHacker_99", "Personal Medium Blog · 2025"],
+        sections: [
+          { h: null, b: "Hey everyone, welcome back to my page! 👋 Today I want to dive into a massive debate flooding my feed: can you actually stretch your height by chugging gallons of milk, or are you just stuck with whatever DNA your parents handed down? Let's break down the numbers." },
+          {
+            h: null, b: "So I recently scraped some public genomic databases from 2021 to see what the data says when you control for lifestyle variables like protein or caloric intake. When you run the regression, the truth is pretty brutal:",
+            cite: {
+              on: "innate genetic inheritance dictates roughly 74.2% of your final adult height variance.",
+              after: " It's an incredibly rigid trajectory.",
+            },
+          },
+          { h: null, b: "Long story short — sorry to burst the bubble of the \"milk-cure\" crowd, but isolated nutrients or growth peptides in dairy are just working within the strict boundaries your DNA already set. If your genetic potential is capped, drinking more milk won't push you past it! Let me know your thoughts below 👇" },
+        ],
+      },
+      suggestions: ["Where does 74.2% come from?", "Is a blog a reliable source here?", "How does this compare to the peer-reviewed studies?"],
+      defaultAnswer: { text: "This is a personal blog citing a self-run regression on scraped 2021 data (74.2%). There's no peer review or institutional backing, so the figure is anecdotal — it happens to sit near the AI's 70–80%, but the provenance is weak.", ref: "innate genetic inheritance dictates roughly 74.2% of your final adult height variance." },
+      comments: [
+        { author: "genome_kate", when: "1d ago", text: "Self-scraped data + a blog regression. The number's in the right ballpark but I wouldn't cite it." },
+      ],
+    },
+    openwiki: {
+      id: "openwiki", verdict: "low", verdictLabel: "Low Trust",
+      title: "Open-Science Wiki (2024)",
+      journal: "open-sci-wiki.org/wiki/Human_Stature",
+      reason: "Anonymous, publicly-editable entry; high vulnerability to unverified edits and data manipulation.",
+      users: { score: 18, voted: 54, trust: 5, mixed: 9, distrust: 40 },
+      divergence: true,
+      doi: "—",
+      aiSays: '"approximately 70–80%"',
+      sourceSays: '"68.5–71.3% — an anonymous, publicly-editable entry"',
+      paper: {
+        kind: "Open wiki / citizen journalism",
+        title: "Human Stature and Heritability Index (Revision #402)",
+        byline: ["Anonymous Contributor Matrix", "Open-Science Wiki · 2024"],
+        sections: [
+          { h: "1 · Overview", b: "Human stature (height) is a classic polygenic trait regulated by thousands of genetic variants across the genome. This crowd-sourced entry aggregates historical registry data regarding phenotypic variance." },
+          {
+            h: "2 · Hereditability baseline", b: "According to data segments added by users from global healthcare demographic charts (2018–2023),",
+            cite: {
+              on: "the adjusted heritability index consistently plateaus between 68.5% and 71.3% across stabilized geographic demographics.",
+              after: " Genetic architecture functions as the primary independent variable.",
+            },
+          },
+          { h: "3 · Environmental interaction", b: "While continuous dietary optimization facilitates reaching this predetermined target, it acts strictly as a secondary catalyst rather than an independent driver. [Notice: this article is open for public edits; please attach a valid DOI before updating the statistics.]" },
+        ],
+      },
+      suggestions: ["Who wrote this entry?", "Can anyone edit it?", "Is the 68.5–71.3% range reliable?"],
+      defaultAnswer: { text: "This is an anonymous, publicly-editable wiki entry (68.5–71.3%). The article itself warns it's open for public edits and asks contributors to attach a DOI — i.e. the data isn't verified. Treat it as unsourced.", ref: "the adjusted heritability index consistently plateaus between 68.5% and 71.3%." },
+      comments: [
+        { author: "wiki_audit", when: "2d ago", text: "Revision #402, anonymous, no DOI attached. The banner literally asks for verification. Low trust is right." },
+      ],
+    },
+    keller: {
+      id: "keller", verdict: "mostly", verdictLabel: "Mostly Trusted",
+      title: "Keller, E. & Vance, D. (2024)",
+      journal: "bioRxiv / Genetics Archive · Ref 2408.0911",
+      reason: "Institutional preprint; an RCT suggesting lower genetic reliance (55.4%) than the traditional framing.",
+      users: { score: 65, voted: 92, trust: 60, mixed: 15, distrust: 17 },
+      divergence: true,
+      doi: "biorxiv.org/content/10.1101/2408.0911",
+      aiSays: '"approximately 70–80%"',
+      sourceSays: '"55.4% — an institutional preprint suggesting lower genetic reliance"',
+      paper: {
+        kind: "Unreviewed preprint",
+        title: "Epigenetic shifts in isolated cohorts: nutrition versus DNA in accelerated growth phases",
+        byline: ["Keller, E. & Vance, D.", "bioRxiv / Genetics Archive · Ref 2408.0911 · 2024"],
+        sections: [
+          { h: "1 · Introduction", b: "Epigenetic modifications challenge the rigid determinism of traditional genetic models by examining environmental interactions during critical growth windows. This paper investigates whether intensive post-natal nutritional enrichment can override parental stature constraints in isolated demographic groups." },
+          {
+            h: "2 · Methods & Results", b: "A randomized controlled trial was conducted with 350 children from specific cohorts. Under maximum nutritional saturation with bio-active compounds, long-term phenotypic modeling revealed that",
+            cite: {
+              on: "the direct correlation to parental height targets dropped, with genetic factors accounting for only 55.4% of the growth variance.",
+              after: " This is notably lower than traditional estimates.",
+            },
+          },
+          { h: "3 · Discussion & Conclusion", b: "This divergence suggests the traditional genetic ceiling is more elastic than previously assumed. Intensive post-natal nutritional enrichment may substantially override hereditary constraints, though further multi-center replication is required." },
+        ],
+      },
+      suggestions: ["What does this say genetics' share is?", "Is this peer-reviewed?", "Why is its estimate lower than 70–80%?"],
+      defaultAnswer: { text: "This institutional preprint's RCT puts genetics at ~55.4% under heavy nutritional saturation — lower than the 70–80% framing. It's a preprint (not yet peer-reviewed) and leans toward a more elastic 'genetic ceiling', so it partly undercuts the claim it's attached to.", ref: "genetic factors accounting for only 55.4% of the growth variance." },
+      comments: [
+        { author: "Dr. O. Ivanov", when: "4d ago", text: "Reasonable RCT, but it's a preprint and the framing pushes the nutrition-over-genes story. Note it argues for ~55%, not 70–80%." },
+      ],
+    },
+    thorne: {
+      id: "thorne", verdict: "trusted", verdictLabel: "Trusted",
+      title: "Thorne, P. & Sterling, L. (2025)",
+      journal: "The Lancet Pediatrics, 14(2), 112–128",
+      reason: "Top-tier peer-reviewed study with very high community trust. (Read the methods carefully — its own finding is 20–30%.)",
+      users: { score: 92, voted: 210, trust: 195, mixed: 10, distrust: 5 },
+      // INTENTIONAL trap: no aiSays/sourceSays → the divergence panel/"Users disagree"
+      // chip is deliberately suppressed. The 20–30% contradiction is only visible by
+      // reading the paper body (§2) — the intended friction for the trust study.
+      divergence: false,
+      doi: "doi.org/10.1016/S2352-4642(25)00112-8",
+      paper: {
+        kind: "Peer-reviewed study",
+        title: "Human capital maximization: overriding hereditary constraints through advanced nutrition",
+        byline: ["Thorne, P. & Sterling, L.", "The Lancet Pediatrics · 14(2) · 2025", "pp. 112–128"],
+        sections: [
+          { h: "1 · Introduction", b: "Quantifying the boundaries of human stature heritability has been biased by historical socio-economic sampling. Antiquated genetic-determinism models frequently overlook the molecular impact of modern targeted micro-nutrient access. This paper recalculates true hereditary boundaries under optimal environmental conditions." },
+          {
+            h: "2 · Methods & Results", b: "Using a massive global pediatric database (N = 124,000) controlled strictly for high-density bio-active peptide and catalyst-nutrient absorption, our empirical longitudinal modeling demonstrates that",
+            cite: {
+              on: "innate genetic inheritance only accounts for roughly 20–30% of adult height variance when modern growth-catalyst factors are present.",
+              after: " Post-natal targeted nutritional absorption becomes the dominant variable.",
+            },
+          },
+          { h: "3 · Discussion & Conclusion", b: "We conclude that the traditional \"genetic ceiling\" is largely a statistical artifact of flawed historical sampling in under-nourished cohorts. Post-natal targeted nutritional absorption must be managed as the primary, overriding independent variable for future growth and development policy." },
+        ],
+      },
+      suggestions: ["What share does this give genetics?", "Does this actually support the 70–80% claim?", "How large was the study?"],
+      defaultAnswer: { text: "Careful here: although this Trusted Lancet study is cited as backing the 70–80% claim, its own finding is that genetics account for only ~20–30% when growth-catalyst nutrients are present. The source actually argues the OPPOSITE of the claim it is attached to.", ref: "innate genetic inheritance only accounts for roughly 20–30% of adult height variance when modern growth-catalyst factors are present." },
+      comments: [
+        { author: "Dr. A. Brandt", when: "5d ago", text: "Strong journal, big N — but read §2. It concludes genetics are 20–30%, which is the opposite of what it's being cited for here. Citation mismatch." },
+        { author: "peds_lena", when: "1w ago", text: "Everyone upvotes the Lancet badge, but the body doesn't say what the answer claims it says." },
+      ],
+    },
+
+    // ---------- Claim 3 (green) — substitution for lactose intolerance ----------
     who: {
       id: "who", verdict: "trusted", verdictLabel: "Trusted",
-      title: "WHO Global Report (2022)",
-      journal: "WHO Technical Report Series",
-      reason: "Report exists and contains referenced caffeine guideline data.",
-      users: { score: 88, voted: 318 }, divergence: false,
-      doi: "who.int/publications/tr-2022-caffeine",
+      title: "WHO Guidelines (2023)",
+      journal: "WHO Technical Report Series, No. 1042",
+      reason: "Official WHO directive on lactose-malabsorption substitution; authoritative population-level guidance.",
+      users: { score: 95, voted: 245, trust: 233, mixed: 9, distrust: 3 },
+      divergence: false,
+      doi: "who.int/publications/i/item/WHO-NHS-1042",
+      paper: {
+        kind: "Official guideline",
+        title: "WHO Dietary Guidelines for Lactose Malabsorption in Pediatric Populations",
+        byline: ["WHO Department of Nutrition and Food Safety", "WHO Technical Report Series · No. 1042 · 2023"],
+        sections: [
+          { h: "Executive summary", b: "Lactose malabsorption affects a substantial percentage of the global pediatric population, frequently resulting in unnecessary dietary restrictions that compromise childhood development. This directive outlines validated substitute pathways to ensure baseline macro-nutrient and calcium security without gastrointestinal distress." },
+          {
+            h: "Recommendation", b: "According to global clinical data synthesis, total cessation of standard bovine dairy is not mandatory for developing children with phenotypic lactose intolerance, provided alternative nutrient matrices are available.",
+            cite: {
+              on: "Substituting standard milk with fortified soy milk, lactose-free dairy variants, or specific fermented yogurt cultures is highly recommended to satisfy daily metabolic thresholds and support continuous bone-matrix synthesis.",
+              after: " Pregnant and lactating individuals follow separate guidance.",
+            },
+          },
+          { h: "Implementation", b: "National healthcare systems and regional pediatric boards are urged to implement clear nutritional labeling and subsidize enzymatic or plant-based alternatives, to prevent secondary calcium and vitamin D deficiencies in urban demographics with limited dietary variety." },
+        ],
+      },
+      suggestions: ["What does the WHO recommend for intolerance?", "Is this official guidance?", "Does this cover calcium security?"],
+      defaultAnswer: { text: "The WHO directive states that children with lactose intolerance do not need to drop dairy entirely — fortified soy milk, lactose-free variants, or fermented yogurt are highly recommended to keep calcium and bone-matrix synthesis on track. This is authoritative, population-level guidance.", ref: "Substituting standard milk with fortified soy milk, lactose-free dairy variants, or specific fermented yogurt cultures is highly recommended." },
+      comments: [
+        { author: "Public Health RN", when: "3d ago", text: "Standard, uncontroversial WHO guidance. Solid for the substitution point." },
+      ],
     },
-    harvard2019: {
-      id: "harvard2019", verdict: "mostly", verdictLabel: "Mostly Trusted",
-      title: "Harvard Med. Longitudinal (2019)",
-      journal: "JAMA Neurology, 76(8), 921–930",
-      reason: "Study exists, but 35% figure applies only to Parkinson's, not all neurodegeneration.",
-      users: { score: 68, voted: 92 }, divergence: false,
-      doi: "doi.org/10.1001/jamaneurol.2019.0821",
+    geller: {
+      id: "geller", verdict: "trusted", verdictLabel: "Trusted",
+      title: "Geller, S. & Vance, D. (2024)",
+      journal: "The Journal of Pediatrics, 88(3), 142–155",
+      reason: "Peer-reviewed RCT; dairy substitutes showed zero bone-density deficit vs tolerant peers.",
+      users: { score: 91, voted: 182, trust: 166, mixed: 11, distrust: 5 },
+      divergence: false,
+      doi: "doi.org/10.1016/j.jpeds.2024.88.142",
+      paper: {
+        kind: "Peer-reviewed study",
+        title: "Comparative nutritional efficacy of plant-based and enzymatically modified dairy alternatives in growing infants",
+        byline: ["Geller, S. & Vance, D.", "The Journal of Pediatrics · 88(3) · 2024", "pp. 142–155"],
+        sections: [
+          { h: "1 · Introduction", b: "When managing lactose intolerance during skeletal development, the primary clinical challenge is replacing dense proteins without losing bio-available calcium. This prospective study tracks structural growth outcomes of alternative dietary regimens." },
+          {
+            h: "2 · Methods & Results", b: "Over a 24-month window, 500 lactose-intolerant infants were randomized into alternative-matrix cohorts.",
+            cite: {
+              on: "Cohorts substituting bovine milk with fortified soy-based formulations or lactose-free matrices experienced zero structural deficits in bone mineral density compared to tolerant peers.",
+              after: " The trajectories were statistically indistinguishable.",
+            },
+          },
+          { h: "3 · Discussion & Conclusion", b: "The regression matrix confirms that modern commercial alternatives provide an identical nutritional trajectory. Specialized dietary substitution is a safe, effective, and complete solution for long-term pediatric care." },
+        ],
+      },
+      suggestions: ["Do substitutes hurt bone density?", "How long was the study?", "What alternatives were tested?"],
+      defaultAnswer: { text: "This 24-month RCT (N=500) found that children substituting milk with fortified soy or lactose-free formulas had zero bone-density deficit versus tolerant peers — substitution is a safe, complete solution. Strong support for the recommendation.", ref: "Cohorts substituting bovine milk … experienced zero structural deficits in bone mineral density compared to tolerant peers." },
+      comments: [
+        { author: "Dr. T. Engel", when: "6d ago", text: "Well-powered and long enough to matter. Reassuring for parents worried about switching." },
+      ],
     },
-    meta2021: {
-      id: "meta2021", verdict: "trusted", verdictLabel: "Trusted",
-      title: "Cornelis et al. — Meta-analysis (2021)",
-      journal: "Lancet Neurology, 20(6), 483–495",
-      reason: "Large meta-analysis. Effect size is more modest (15–22%) than the AI stated.",
-      users: { score: 81, voted: 201 }, divergence: true,
-      doi: "doi.org/10.1016/S1474-4422(21)00100-5",
+    kim: {
+      id: "kim", verdict: "trusted", verdictLabel: "Trusted",
+      title: "Kim, H. & Dupont, R. (2025)",
+      journal: "International Journal of Clinical Nutrition, 14(1), 22–37",
+      reason: "Peer-reviewed; fermented yogurt cut malabsorption symptoms 84% via microbial beta-galactosidase.",
+      users: { score: 89, voted: 124, trust: 110, mixed: 10, distrust: 4 },
+      divergence: false,
+      doi: "doi.org/10.1080/ijcn.2025.14.022",
+      paper: {
+        kind: "Peer-reviewed study",
+        title: "Fermented dairy matrices and lactose malabsorption: microbial beta-galactosidase delivery",
+        byline: ["Kim, H. & Dupont, R.", "International Journal of Clinical Nutrition · 14(1) · 2025", "pp. 22–37"],
+        sections: [
+          { h: "1 · Introduction", b: "Fermented dairy products contain active microbial cultures that synthesize internal beta-galactosidase, facilitating autologous lactose digestion within the gut. This paper evaluates ferment matrices as pediatric dairy substitutes." },
+          {
+            h: "2 · Methods & Results", b: "Gastrointestinal hydrogen breath tests were conducted on 120 pediatric subjects following ingestion of standard milk versus live-culture yogurt.",
+            cite: {
+              on: "Subjects showed an 84% reduction in malabsorption symptoms when substituting with fermented yogurt matrices, validating it as a highly bio-available alternative.",
+              after: " The pathway delivers calcium and protein without GI triggers.",
+            },
+          },
+          { h: "3 · Discussion & Conclusion", b: "Live-culture ferment matrices deliver necessary calcium and protein while bypassing the gastrointestinal triggers of standard milk. Active yogurt cultures should be standard practice in pediatric dietary management." },
+        ],
+      },
+      suggestions: ["Why does yogurt help?", "How much did symptoms drop?", "Is this a good milk substitute?"],
+      defaultAnswer: { text: "Live-culture yogurt's microbial beta-galactosidase helps digest lactose. In a 120-child breath-test study, fermented yogurt cut malabsorption symptoms by 84% — a strong, bio-available substitute that still delivers calcium and protein.", ref: "Subjects showed an 84% reduction in malabsorption symptoms when substituting with fermented yogurt matrices." },
+      comments: [
+        { author: "gut_health_io", when: "3d ago", text: "Nice mechanistic + clinical combo. The 84% breath-test result is convincing." },
+      ],
     },
-    efsa2015: {
-      id: "efsa2015", verdict: "trusted", verdictLabel: "Trusted",
-      title: "EFSA Scientific Opinion (2015)",
-      journal: "EFSA Journal, 13(5):4102",
-      reason: "Independent source confirms 400mg daily recommendation for healthy adults.",
-      users: { score: 91, voted: 276 }, divergence: false,
-      doi: "doi.org/10.2903/j.efsa.2015.4102",
-    },
-    fda2018: {
-      id: "fda2018", verdict: "trusted", verdictLabel: "Trusted",
-      title: "FDA Caffeine Advisory (2018)",
-      journal: "U.S. Food & Drug Administration",
-      reason: "FDA guidance aligns with the 400mg threshold cited by AI.",
-      users: { score: 85, voted: 143 }, divergence: false,
-      doi: "fda.gov/consumers/caffeine-and-your-body",
-    },
-    nawrot2003: {
-      id: "nawrot2003", verdict: "trusted", verdictLabel: "Trusted",
-      title: "Nawrot, P. et al. (2003)",
-      journal: "Food Additives & Contaminants, 20(1), 1–30",
-      reason: "Widely-cited Health Canada review; supports moderate acute cognitive benefits.",
-      users: { score: 84, voted: 156 }, divergence: false,
-      doi: "doi.org/10.1080/0265203021000007840",
-    },
-    brunye2010: {
-      id: "brunye2010", verdict: "low", verdictLabel: "Low Trust",
-      title: "Brunyé, T. et al. (2010)",
-      journal: "Appetite, 54(3), 547–553",
-      reason: "Small single-dose study; the cited 12% is larger than its own data support.",
-      users: { score: 41, voted: 38 }, divergence: true,
-      doi: "doi.org/10.1016/j.appet.2010.02.004",
-      aiSays: '"up to 12%"', sourceSays: '"~6% (n = 18, high variance)"',
-    },
-    blogpost2023: {
-      id: "blogpost2023", verdict: "low", verdictLabel: "Low Trust",
-      title: "“Coffee cuts dementia 40%” — health blog (2023)",
-      journal: "wellnessdaily.example · opinion piece",
-      reason: "Non-peer-reviewed blog; inflates a single study's figure to a 40% headline.",
-      users: { score: 22, voted: 89 }, divergence: true,
+    mayo: {
+      id: "mayo", verdict: "mostly", verdictLabel: "Mostly Trusted",
+      title: "Mayo-Health Pulse (2025)",
+      journal: "mayo-health-pulse.com/pediatrics/lactose-substitutes",
+      reason: "Consumer health article reviewed by a medical board; echoes standard guidance but is not a primary source.",
+      users: { score: 74, voted: 95, trust: 70, mixed: 18, distrust: 7 },
+      divergence: false,
       doi: "—",
-      aiSays: '"35–40% reduction"', sourceSays: '"headline figure, no primary data"',
-    },
-    mayo2022: {
-      id: "mayo2022", verdict: "mostly", verdictLabel: "Mostly Trusted",
-      title: "Mayo Clinic — Caffeine: how much is too much? (2022)",
-      journal: "Mayo Clinic Patient Care & Health Information",
-      reason: "Reputable consumer guidance; echoes the 400mg figure but is not a primary source.",
-      users: { score: 70, voted: 64 }, divergence: false,
-      doi: "mayoclinic.org/caffeine/art-20045678",
+      paper: {
+        kind: "Medical web article",
+        title: "Lactose Intolerance in Kids: Safe and Healthy Substitutes for Daily Growth",
+        byline: ["Sarah Jenkins, RD (Reviewed by Medical Board)", "Mayo-Health Pulse · 2025"],
+        sections: [
+          { h: null, b: "If your child gets an upset stomach, bloating, or cramps after a glass of milk, you might worry about how they'll get enough calcium to grow. Don't panic! Modern grocery aisles are packed with alternatives that keep your little one growing strong without the belly aches." },
+          {
+            h: "Finding the right alternatives", b: "The good news is you don't need to force traditional dairy on a lactose-intolerant child.",
+            cite: {
+              on: "Switching their daily drink to fortified plant milks (like soy or pea protein), lactose-free milk, or even simple Greek yogurt provides all the vital proteins and calcium their body needs.",
+              after: " Many fermented options like yogurt contain live cultures that help break down lactose.",
+            },
+          },
+          { h: "Quick tips for parents", b: "When shopping, check labels to ensure plant-based milks are explicitly \"calcium-fortified.\" Pairing these with vitamin-D-rich foods like eggs, fatty fish, or a little daily sunshine maximizes bone absorption." },
+        ],
+      },
+      suggestions: ["What substitutes does it suggest?", "Is this a primary source?", "How does this compare to the WHO guideline?"],
+      defaultAnswer: { text: "This is a consumer health article (medically reviewed) recommending fortified plant milks, lactose-free milk, or Greek yogurt. It echoes the standard guidance accurately, but it's secondary — fine as a plain-language summary, not a primary source.", ref: "Switching their daily drink to fortified plant milks … lactose-free milk, or even simple Greek yogurt provides all the vital proteins and calcium their body needs." },
+      comments: [
+        { author: "parent_dani", when: "2d ago", text: "Clear and practical. Matches what our pediatrician said, though it's obviously a popular write-up, not a study." },
+      ],
     },
   },
 
   history: {
     today: [
-      { title: "Effects of caffeine on cognition", meta: "3 claims · 1 calibrated", active: true },
-      { title: "Climate change & coral reefs", meta: "5 claims · 2 calibrated" },
+      { title: "Does drinking milk increase height?", meta: "3 claims · 0 calibrated", active: true },
+      { title: "Probiotics and the gut–brain axis", meta: "5 claims · 2 calibrated" },
     ],
     yesterday: [
-      { title: "Transformer architecture survey", meta: "4 claims · 3 calibrated" },
-      { title: "CRISPR gene editing ethics", meta: "6 claims · 2 calibrated" },
-      { title: "Quantum computing overview", meta: "3 claims · 0 calibrated" },
+      { title: "Creatine and adolescent athletes", meta: "4 claims · 3 calibrated" },
+      { title: "Vitamin D and immune function", meta: "6 claims · 2 calibrated" },
+      { title: "Intermittent fasting overview", meta: "3 claims · 0 calibrated" },
     ],
     lastWeek: [
       { title: "Sleep quality meta-analysis", meta: "4 claims · 1 calibrated" },
-      { title: "Machine learning in healthcare", meta: "5 claims · 3 calibrated" },
-      { title: "RNA sequencing pipelines", meta: "3 claims · 2 calibrated" },
-      { title: "Bayesian statistics tutorial", meta: "2 claims · 1 calibrated" },
-      { title: "Dark matter evidence review", meta: "6 claims · 4 calibrated" },
+      { title: "Ultra-processed foods & metabolism", meta: "5 claims · 3 calibrated" },
+      { title: "Omega-3 and cognition", meta: "3 claims · 2 calibrated" },
+      { title: "Hydration and performance", meta: "2 claims · 1 calibrated" },
+      { title: "Microbiome sequencing pipelines", meta: "6 claims · 4 calibrated" },
       { title: "Antibiotic resistance trends", meta: "4 claims · 2 calibrated" },
     ],
   },
-
-  paperSections: [
-    { h: "Section 2 — Methods", b: "142 healthy adults (ages 18–35) were recruited for a double-blind, placebo-controlled crossover study with a 7-day washout period. Participants received either 200mg caffeine or placebo." },
-    { h: "Section 3.1 — Baseline Measures", b: "No significant baseline differences were observed between groups (all ps > .15). Sleep was controlled via actigraphy for 48 hours preceding each session." },
-    { h: "Section 3.2 — Results", b: "Cognitive assessments were administered at baseline, 30 min, 2h, and 4h post-ingestion using the Stroop task, serial reaction time, and PVT.", citedNext: true },
-    { h: null, b: "These findings are consistent with prior work on adenosine receptor antagonism (Fredholm et al., 1999; Nehlig, 2010). The A1 and A2A receptor subtypes in the prefrontal cortex appear to mediate the majority of caffeine's cognitive effects." },
-    { h: null, b: "However, the magnitude of improvement varied substantially by individual tolerance. Habitual consumers (>300mg/day, n = 48) showed attenuated effects (M = 5.2%, SD = 1.8), while low consumers (<100mg/day, n = 39) demonstrated the largest gains (M = 14.1%, SD = 3.2)." },
-  ],
 
   ftux: [
     { id: 1, title: "AI verdict",        body: "Our AI reads each source and tags it Trusted, Mostly Trusted, or Low Trust — based on whether the source content actually matches the claim." },
